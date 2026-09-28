@@ -6,8 +6,10 @@
   "environment": "server",
   "license": "MIT",
   "entrypoints": {
+    "main": ["com.shouyun.jiahaomode.test.JiahaoTimeTestBlocks"],
     "fabric-gametest": [
-      "com.shouyun.jiahaomode.test.JiahaoTransformationTests"
+      "com.shouyun.jiahaomode.test.JiahaoTransformationTests",
+      "com.shouyun.jiahaomode.test.JiahaoTimeStopTests"
     ]
   },
   "depends": {

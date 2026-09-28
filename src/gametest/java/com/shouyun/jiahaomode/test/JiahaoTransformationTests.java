@@ -159,7 +159,7 @@ public final class JiahaoTransformationTests implements FabricGameTest {
 				.filter(LightningEntity.class::isInstance).count();
 	}
 
-	private static TestPlayerConnection connectTestPlayer(MinecraftServer server, ServerWorld world, String name) {
+	static TestPlayerConnection connectTestPlayer(MinecraftServer server, ServerWorld world, String name) {
 		ConnectedClientData data = ConnectedClientData.createDefault(new GameProfile(UUID.randomUUID(), name), false);
 		ServerPlayerEntity player = new ServerPlayerEntity(server, world, data.gameProfile(), data.syncedOptions());
 		ClientConnection connection = new ClientConnection(NetworkSide.SERVERBOUND);
@@ -169,7 +169,7 @@ public final class JiahaoTransformationTests implements FabricGameTest {
 		return new TestPlayerConnection(player, channel);
 	}
 
-	private record TestPlayerConnection(ServerPlayerEntity player, EmbeddedChannel channel) {
+	static record TestPlayerConnection(ServerPlayerEntity player, EmbeddedChannel channel) {
 		long syncPacketCount() {
 			return channel.outboundMessages().stream()
 					.filter(packet -> packet instanceof CustomPayloadS2CPacket custom
@@ -198,8 +198,9 @@ public final class JiahaoTransformationTests implements FabricGameTest {
 		boolean hasActionBar(String key) {
 			return channel.outboundMessages().stream()
 					.anyMatch(packet -> packet instanceof GameMessageS2CPacket message && message.overlay()
-							&& message.content().getSiblings().stream().anyMatch(text ->
-							text.getContent() instanceof TranslatableTextContent translated && translated.getKey().equals(key)));
+							&& (message.content().getContent() instanceof TranslatableTextContent root && root.getKey().equals(key)
+							|| message.content().getSiblings().stream().anyMatch(text ->
+							text.getContent() instanceof TranslatableTextContent translated && translated.getKey().equals(key))));
 		}
 	}
 }

@@ -3,7 +3,7 @@
 	"id": "jiahao-mode",
 	"version": "${version}",
 	"name": "Jiahao Mode",
-	"description": "A persistent Jiahao transformation system for Minecraft Fabric 1.21.1.",
+	"description": "Persistent Jiahao transformation and dimension-scoped time stop for Minecraft Fabric 1.21.1.",
 	"authors": [
 		"寿云"
 	],
@@ -25,6 +25,7 @@
 			"com.shouyun.jiahaomode.client.JiahaoModeDataGenerator"
 		]
 	},
+	"mixins": ["jiahao-mode.mixins.json", {"config": "jiahao-mode.client.mixins.json", "environment": "client"}],
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"minecraft": "~1.21.1",

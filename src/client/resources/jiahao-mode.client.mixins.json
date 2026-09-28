@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "com.shouyun.jiahaomode.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["ClientWorldTimeStopMixin"],
+  "injectors": { "defaultRequire": 1 }
+}

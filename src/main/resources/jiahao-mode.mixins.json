@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.shouyun.jiahaomode.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ServerWorldEntityTimeStopMixin",
+    "ServerWorldSimulationTimeStopMixin",
+    "ServerChunkManagerTimeStopMixin",
+    "WorldTimeStopMixin",
+    "ChunkSerializerTimeStopMixin",
+    "ServerPlayerTimeStopMixin",
+    "ServerPlayNetworkHandlerTimeStopMixin",
+    "EntityPushTimeStopMixin"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}

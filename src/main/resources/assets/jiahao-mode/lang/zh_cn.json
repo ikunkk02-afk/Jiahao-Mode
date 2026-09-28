@@ -2,5 +2,12 @@
   "item.jiahao-mode.jiahao_transformer": "嘉豪变身器",
   "message.jiahao-mode.prefix": "嘉豪模式",
   "message.jiahao-mode.activated": "嘉豪形态已开启",
-  "message.jiahao-mode.deactivated": "嘉豪形态已解除"
+  "message.jiahao-mode.deactivated": "嘉豪形态已解除",
+  "key.categories.jiahao-mode": "嘉豪模式",
+  "key.jiahao-mode.jiahao_time": "嘉豪时刻",
+  "message.jiahao-mode.time.not_in_form": "你还没有进入嘉豪形态",
+  "message.jiahao-mode.time.already_stopped": "这个世界的时间已经停止",
+  "message.jiahao-mode.time.cooldown": "嘉豪时刻正在冷却",
+  "message.jiahao-mode.time.started": "时间已停止",
+  "message.jiahao-mode.time.ended": "时间开始流动"
 }

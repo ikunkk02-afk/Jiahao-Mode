@@ -18,7 +18,24 @@ Yarn **1.21.1+build.3**. Mod ID: `jiahao-mode`.
 玩家退出重进、死亡重生和切换维度均保留形态。恢复状态不会再次触发演出或下雨。
 无天空维度跳过天气修改；沙漠等生物群系遵循原版降水规则。
 
-本阶段不包含时间暂停、闪避、动画、镜头、人物模型、皮肤、语音、HUD、配置或按键。
+## 嘉豪时刻
+
+进入嘉豪形态后按 **R** 暂停当前维度的自动模拟，再次按下提前恢复。
+最多持续 **8 秒（160 个服务器 Tick）**，结束后冷却 **3 秒（60 Tick）**。
+按键名称为“嘉豪时刻 / Jiahao Time”，可在“设置 → 控制 → 嘉豪模式”重新绑定。
+发动时自动下车；同一维度只允许一个拥有者，不同维度可以各自发动。
+
+拥有者可以移动、跳跃、转动视角、切换物品并立即造成普通伤害。
+其他实体、投射物、TNT、掉落物、载具及同维度其他玩家被冻结；太阳、月亮、
+计划方块/流体更新、随机更新、方块实体、活塞事件、自然生成及天气倒计时停止。
+雨滴渲染、音效、网络、输入和 UI 继续运行。箭的速度、TNT 引信等保留，恢复后继续。
+
+普通玩家不能发动。死亡、退出、切换维度、解除形态、世界卸载及服务器关闭
+均结束暂停。暂停状态和冷却不保存到存档；没有修改 daylight gamerule，也没有暂停线程。
+
+服务端验证空内容 C2S 请求并发送 S2C 状态；技术接口、Mixin 和限制见
+[TIME_STOP.md](TIME_STOP.md)，验证范围与待人工验收项见 [TESTING.md](TESTING.md)。
+本阶段不包含闪避、动画、镜头、人物模型、皮肤、语音、HUD、Shader 或延迟伤害。
 
 ## 状态 API
 
@@ -36,8 +53,8 @@ boolean newState = JiahaoStateManager.toggleJiahao(serverPlayer);
 
 `state.JiahaoState` 封装 Fabric 数据附件注册，使用 `Codec.BOOL` 保存到玩家 NBT：
 `fabric:attachments` → `jiahao-mode:jiahao_state`。使用 `copyOnDeath()` 保留重生状态，
-Fabric 自动同步到玩家自己以及正在跟踪该玩家的客户端。无需直接操作 NBT、
-自定义网络协议、第三方状态库或模组自定义 Mixin。
+Fabric 自动同步到玩家自己以及正在跟踪该玩家的客户端。形态保存本身无需直接操作
+NBT、自定义网络协议或第三方状态库；时间暂停另外使用服务器权威网络包和条件 Mixin。
 
 `item.ModItems` 负责注册，`item.JiahaoTransformerItem` 只转交服务端切换请求，
 `effect.JiahaoTransformationEffects` 负责一次性提示、音效和天气。立即下雨同时发送

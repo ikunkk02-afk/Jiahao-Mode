@@ -2,5 +2,12 @@
   "item.jiahao-mode.jiahao_transformer": "Jiahao Transformer",
   "message.jiahao-mode.prefix": "Jiahao Mode",
   "message.jiahao-mode.activated": "Jiahao Form Activated",
-  "message.jiahao-mode.deactivated": "Jiahao Form Deactivated"
+  "message.jiahao-mode.deactivated": "Jiahao Form Deactivated",
+  "key.categories.jiahao-mode": "Jiahao Mode",
+  "key.jiahao-mode.jiahao_time": "Jiahao Time",
+  "message.jiahao-mode.time.not_in_form": "You are not in Jiahao Form",
+  "message.jiahao-mode.time.already_stopped": "Time is already stopped in this world",
+  "message.jiahao-mode.time.cooldown": "Jiahao Time is on cooldown",
+  "message.jiahao-mode.time.started": "Time has stopped",
+  "message.jiahao-mode.time.ended": "Time flows again"
 }
