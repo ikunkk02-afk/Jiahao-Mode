@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "jiahao-mode",
+	"version": "${version}",
+	"name": "Jiahao Mode",
+	"description": "Jiahao Mode for Minecraft Fabric 1.21.1.",
+	"authors": [
+		"寿云"
+	],
+	"contact": {
+		"homepage": "https://github.com/ikunkk02-afk/Jiahao-Mode",
+		"sources": "https://github.com/ikunkk02-afk/Jiahao-Mode"
+	},
+	"license": "MIT",
+	"icon": "assets/jiahao-mode/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.shouyun.jiahaomode.JiahaoMode"
+		],
+		"client": [
+			"com.shouyun.jiahaomode.client.JiahaoModeClient"
+		],
+		"fabric-datagen": [
+			"com.shouyun.jiahaomode.client.JiahaoModeDataGenerator"
+		]
+	},
+	"mixins": [
+		"jiahao-mode.mixins.json",
+		{
+			"config": "jiahao-mode.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
