@@ -27,6 +27,12 @@ fabricApi {
 		client = true
 		modId = "jiahao-mode"
 	}
+	configureTests {
+		createSourceSet = true
+		modId = "jiahao-mode-test"
+		enableGameTests = true
+		enableClientGameTests = false
+	}
 }
 
 dependencies {

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-mode-test",
+  "version": "1.0.0",
+  "name": "Jiahao Mode Integration Tests",
+  "environment": "server",
+  "license": "MIT",
+  "entrypoints": {
+    "fabric-gametest": [
+      "com.shouyun.jiahaomode.test.JiahaoTransformationTests"
+    ]
+  },
+  "depends": {
+    "jiahao-mode": "*"
+  }
+}
