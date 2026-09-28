@@ -68,6 +68,20 @@ java {
 	targetCompatibility = JavaVersion.VERSION_21
 }
 
+// Client animation math tests are isolated from the distributable and the server GameTests.
+sourceSets {
+	visualtest {
+		compileClasspath += sourceSets.client.output
+		runtimeClasspath += sourceSets.client.output
+	}
+}
+tasks.register('runVisualClockTests', JavaExec) {
+	dependsOn tasks.named('visualtestClasses')
+	classpath = sourceSets.visualtest.runtimeClasspath
+	mainClass = 'com.shouyun.jiahaomode.test.FrozenRenderClockTests'
+}
+tasks.named('check') { dependsOn tasks.named('runVisualClockTests') }
+
 jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName

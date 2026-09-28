@@ -1,0 +1,19 @@
+// Isolated, opt-in real-client checks. Never adds test classes to the published mod.
+allprojects {
+    afterEvaluate {
+        def visualSmoke = sourceSets.create('visualSmoke')
+        visualSmoke.java.setSrcDirs(['src/visualsmoke/java'])
+        visualSmoke.resources.setSrcDirs(['src/visualsmoke/resources'])
+        visualSmoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        visualSmoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-weather-smoke') { sourceSet visualSmoke }
+        loom.runs.client {
+            runDir 'build/run/weatherVisualSmoke'
+            programArgs '--quickPlaySingleplayer', 'WeatherSmoke'
+        }
+        tasks.named('runClient') {
+            dependsOn tasks.named('visualSmokeClasses')
+            classpath += visualSmoke.output
+        }
+    }
+}

@@ -28,7 +28,9 @@ Yarn **1.21.1+build.3**. Mod ID: `jiahao-mode`.
 拥有者可以移动、跳跃、转动视角、切换物品并立即造成普通伤害。
 其他实体、投射物、TNT、掉落物、载具及同维度其他玩家被冻结；太阳、月亮、
 计划方块/流体更新、随机更新、方块实体、活塞事件、自然生成及天气倒计时停止。
-雨滴渲染、音效、网络、输入和 UI 继续运行。箭的速度、TNT 引信等保留，恢复后继续。
+雨雪动画、云层漂移、天气强度、闪电闪光及普通环境粒子也定格；镜头、网络、输入
+和 UI 继续运行。动画恢复时扣除暂停期间经过的时间，避免云层或雨雪跳跃。
+暂停时停止产生新的随机天气声音和水花。箭的速度、TNT 引信等保留，恢复后继续。
 
 普通玩家不能发动。死亡、退出、切换维度、解除形态、世界卸载及服务器关闭
 均结束暂停。暂停状态和冷却不保存到存档；没有修改 daylight gamerule，也没有暂停线程。
@@ -82,9 +84,13 @@ Minecraft 1.21.1 使用这里的 item model，不需要较新版本的 `assets/<
 .\gradlew.bat runClient
 ```
 
-构建同时运行 `src/gametest` 的服务端集成测试。测试使用已有 Fabric API，在
+构建同时运行 `src/gametest` 的服务端集成测试和 `src/visualtest` 的视觉时钟测试。测试使用已有 Fabric API，在
 `build/run/gameTest` 中创建隔离世界，不写入日常 `run/saves`；测试类不包含在发布 JAR 中。
 也可单独执行 `gradlew.bat runGameTest`。完整验证记录及手动测试项见 [TESTING.md](TESTING.md)。
+
+可选客户端数值测试使用 `scripts/weather-visual-smoke.gradle`，详见测试记录；测试模组
+只在显式使用此脚本时加载，不进入发布 JAR。Vanilla 天气渲染已接入冻结；Iris 自行
+实现的 Shader 时间、降水及体积云动画尚未接入，也没有宣称完成 Sodium/Iris 实机验证。
 
 编译目标为 Java 21。当前项目通过 `gradle.properties` 的 `org.gradle.java.home`
 指定本机 JDK 25 路径，其他电脑需调整这个本地路径，或通过

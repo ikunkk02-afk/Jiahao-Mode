@@ -19,7 +19,8 @@ Minecraft 1.21.1，Yarn 1.21.1+build.3，Fabric API 0.116.17+1.21.1。
 
 修改了 `JiahaoMode.java`、`state/JiahaoStateManager.java`、客户端 `JiahaoModeClient.java`、
 主 `fabric.mod.json`、`zh_cn.json`、`en_us.json`、原变身测试工具、测试 `fabric.mod.json`、
-`README.md` 和 `TESTING.md`。没有删除原资源；`build.gradle`、mappings 和依赖版本保持原样。
+`README.md` 和 `TESTING.md`。没有删除原资源；mappings 和依赖版本保持原样。
+后续天气视觉修改在 `build.gradle` 增加隔离的视觉时钟测试任务，未改依赖。
 测试源码提交在隔离的 `src/gametest`；编译测试类不进入发布 JAR。
 
 ## 按键与网络
@@ -75,7 +76,49 @@ S2C `JiahaoTimeStatePayload` 的 ID 为 `jiahao-mode:time_state`，包含维度 
 | `ServerPlayerTimeStopMixin` | 冻结非拥有者 `playerTick()`，补上网络处理器独立调用玩家模拟的路径 |
 | `ServerPlayNetworkHandlerTimeStopMixin` | 在线程切换检查之后拒绝冻结玩家的移动、攻击、物品、方块和容器操作；保留传送确认、聊天和保活；清理悬空检测计数 |
 | `EntityPushTimeStopMixin` | 任一实体被冻结时跳过碰撞推力，防止速度持续累加 |
-| 客户端 `ClientWorldTimeStopMixin` | 冻结 `tickTime`、非拥有者 `tickEntity/tickPassenger`，整理前帧位置避免渲染插值漂移 |
+| 客户端 `ClientWorldTimeStopMixin` | 冻结 `tickTime`、非拥有者 `tickEntity/tickPassenger`，整理前帧位置避免渲染插值漂移；天气视觉更新还禁止环境 display ticks 和闪电闪光倒计时 |
+
+## 天气视觉冻结（后续修改）
+
+原版 1.21.1 雨雪位于 `WorldRenderer.renderWeather`，云位于 `renderClouds`。
+它们使用渲染器自己的 `ticks` 和传入的 `tickDelta`，不依赖被冻结的世界时间，也不是雨实体。
+因此先前即使服务端天气和实体停止，雨雪与云仍会动画。
+本轮检查本地 Yarn 源码及字节码后，只修改这些方法读取的动画时间和局部插值参数。
+
+`client.visual.JiahaoTimeStopClientState` 是现有权威状态的视觉快照，不是第二套技能系统。
+同维度 S2C 首次 active 时记录最近显示帧的动画时间、插值比例、雨量和原始雷暴强度；
+每 20 Tick 的重复 active 同步不会重新拍快照。结束时释放；换 ClientWorld 或断线时清理。
+世界仅通过弱引用绑定。网络包格式、R 键、服务端管理器和形态 API 均保持不变。
+
+`FrozenRenderClock` 保存冻结时刻和累计时间偏移。暂停期间始终返回同一个整数 Tick 和
+小数 Tick；雨雪的纹理滚动和随机列动画、云的世界空间漂移均使用这组参数。
+相机坐标和视角仍由原版传入，所以玩家可以从其他位置观察同一片静止天气。
+恢复时设置 `offset = 当前原版时间 - 冻结时间`，随后按原版速率推进；多次暂停累计偏移，
+没有 160 Tick 的追赶跳跃。切换世界后重置，不持有上一存档的冻结状态。
+
+| 客户端 Mixin | 作用 |
+|---|---|
+| `WorldRendererTimeAccess` | 只读原版渲染 Tick，绝不停止或改写真实计数器 |
+| `WorldRendererWeatherTimeStopMixin` | 雨雪/云方法内替换时间读取和局部 delta；暂停时禁止 `tickRainSplashing` 的新水花与随机雨声；冻结非拥有者实体和方块实体渲染插值；换世界清理快照 |
+| `WorldWeatherTimeStopMixin` | 锁定雨量/雷暴的显示值及原版渐变字段，暂停时拒绝更新，恢复从捕获值继续；虽目标为 World，但只列入 client 配置且只处理当前客户端世界 |
+| `ParticleTimeStopMixin` | 为每个粒子提供默认 false 的 `timeStopImmune` 标志 |
+| `ParticleManagerTimeStopMixin` | 暂停普通粒子及 emitter 的个别 Tick，渲染使用冻结的局部插值；保留管理器队列、清理和渲染以及免疫粒子 |
+| `ClientWorldTimeStopMixin` | 原实体/世界时间冻结继续生效；新增禁止环境随机显示更新、锁定闪电闪光倒计时 |
+
+普通粒子包含暂停前已经存在的水花；暂停后新普通粒子也默认冻结。未来演出使用
+`JiahaoTimeStopClientState.markTimeStopImmune(particle)` 标记后可正常运动。
+没有冻结整个 ParticleManager、Camera、鼠标、渲染循环、全局 tickDelta、GUI 或声音引擎。
+`tickRainSplashing` 停止后不产生新的随机雨声，已有雷声/其他声音可播完；本轮未增加静态雨声循环。
+
+太阳、月亮和星空继续使用现有维度 Day Time 冻结。1.21.1 `getSkyAngle` 使用
+`getLunarTime()`，不需要第二套天空时钟。LightningEntity 的 Tick 已被原实体门控覆盖，
+客户端额外锁定的闪光计数避免闪光提前结束。服务端 `tickWeather` 仍由既有 Mixin
+跳过，clear/rain/thunder timer、raining/thundering 状态及自然天气转换均不推进。
+
+所有新视觉类位于 client 源集。渲染器易被替换的调用点允许零匹配，避免其他渲染模组
+移除这些调用后因强制匹配而启动崩溃；这不等于已验证 Sodium/Iris 兼容。
+Vanilla 的雨雪、云、天空、天气强度、闪电和普通粒子已接入；实际视觉验收仍见测试清单。
+Iris Shader 自行使用的 TIME uniform、Shader 雨和体积云可能继续动画，后续需要专门兼容层。
 
 所有模拟取消均查询当前世界暂停状态；实体路径排除拥有者。时间 getter 和序列化在恢复后
 继续处理偏移以保护调度延迟。没有取消整个 `ServerWorld.tick()`，没有暂停主线程或全局 TickManager。
@@ -98,7 +141,8 @@ Fabric 死亡、断线、换维度、世界卸载、服务器停止事件执行�
 
 - 嘉豪主动操作造成的即时邻居更新及即时伤害/爆炸；计划更新和活塞事件仍延后。
 - 管理员命令、全局命令函数/底层定时事件、世界边界动画。
-- 其他模组绕过这些入口直接执行的逻辑，及客户端自身的粒子/音效/雨滴动画。
+- 其他模组绕过这些入口直接执行的逻辑，Shader 自定义动画以及已经播放的声音。
+- 原版纹理图集中的流动纹理等未在本轮拦截；它们与 GUI/物品共用资源，需另做有范围的渲染兼容。
 
 这些路径不能通过取消整个世界 Tick 安全拦截。若后续需要更严格的画面静止，应针对具体
 可见变化加有限拦截，并保留拥有者交互与网络响应。没有摄像机、滤镜、Shader、自定义音频。

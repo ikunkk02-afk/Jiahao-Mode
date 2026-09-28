@@ -314,16 +314,23 @@ public final class JiahaoTimeStopTests implements FabricGameTest {
 		void checkSavedScheduledDelay() {
 			WorldChunk chunk = (WorldChunk) world.getChunk(lamp);
 			NbtCompound nbt = ChunkSerializer.serialize(world, chunk);
+			// GameTest origins vary; these adjacent fixtures may straddle a chunk boundary.
+			WorldChunk fluidChunk = (WorldChunk) world.getChunk(fluid);
+			NbtCompound fluidNbt = ChunkSerializer.serialize(world, fluidChunk);
 			int delay = delay(nbt, lamp);
-			int fluidDelay = delay(nbt, fluid, "fluid_ticks");
+			int fluidDelay = delay(fluidNbt, fluid, "fluid_ticks");
 			check(delay == 20, "Saved scheduled tick must retain remaining delay during pause: " + delay);
 			check(fluidDelay > 0, "Saved fluid tick must retain a positive remaining delay");
+			NbtCompound restored = roundTripChunk(chunk, nbt);
+			NbtCompound restoredFluid = roundTripChunk(fluidChunk, fluidNbt);
+			check(delay(restored, lamp) == delay, "Chunk deserialize/serialize must retain remaining scheduled delay: " + delay(restored, lamp));
+			check(delay(restoredFluid, fluid, "fluid_ticks") == fluidDelay, "Chunk reload retains remaining fluid delay");
+		}
+		NbtCompound roundTripChunk(WorldChunk chunk, NbtCompound nbt) {
 			var proto = ChunkSerializer.deserialize(world, world.getChunkManager().getPointOfInterestStorage(),
 					new StorageKey("time-stop-test", world.getRegistryKey(), "chunk"), chunk.getPos(), nbt);
 			WorldChunk restoredChunk = proto instanceof WrapperProtoChunk wrapper ? wrapper.getWrappedChunk() : new WorldChunk(world, proto, null);
-			NbtCompound restored = ChunkSerializer.serialize(world, restoredChunk);
-			check(delay(restored, lamp) == delay, "Chunk deserialize/serialize must retain remaining scheduled delay: " + delay(restored, lamp));
-			check(delay(restored, fluid, "fluid_ticks") == fluidDelay, "Chunk reload retains remaining fluid delay");
+			return ChunkSerializer.serialize(world, restoredChunk);
 		}
 		int delay(NbtCompound nbt, BlockPos position) {
 			return delay(nbt, position, "block_ticks");

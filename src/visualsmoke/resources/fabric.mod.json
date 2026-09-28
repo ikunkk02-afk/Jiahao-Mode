@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-weather-smoke",
+  "version": "1.0.0",
+  "name": "Isolated Jiahao Weather Checks",
+  "environment": "client",
+  "license": "MIT",
+  "entrypoints": {"client": ["com.shouyun.jiahaomode.test.WeatherVisualSmoke"]},
+  "depends": {"jiahao-mode": "*", "fabric-api": "*"}
+}
