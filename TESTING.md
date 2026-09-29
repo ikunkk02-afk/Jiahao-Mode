@@ -517,6 +517,104 @@ WorldAccess 保持原值。旧计划 Tick 序列化的 20 Tick 断言保留并�
 跨维度保留的闪避余速、截图检查后校正张臂的旋转方向，以及联机参数导出任务捕获 Task 对象导致的 configuration-cache 错误。
 导出脚本现保存普通值，最终配置缓存正常存储；没有用忽略失败的方式取得通过结果。
 
+## 第六阶段：嘉豪盔甲、穿戴限制与固定台词（2026-09-29）
+
+本轮基线工作区干净，原 14 项必需 GameTest 与 build 通过。实现后最终
+`gradlew.bat build` 输出 **BUILD SUCCESSFUL in 18s**，**All 17 required tests passed**；
+既有视觉时钟和镜头数学检查也属于 build 的 check 依赖。
+
+新增三项 GameTest：
+
+- `registrationAllEquipmentCombinationsAndSmithing`：真正执行四个 `/give`；验证注册、耐久、
+  护甲、韧性、附魔能力及钻石修复；遍历全部 15 种不完整组合，拒绝变身且不下雨，
+  Action Bar 使用准确翻译键；拒绝错误栏位和直接 setter 绕过。
+  四个真实 SmithingScreenHandler 输出均正确，保留 protection 3、名称、石英 SENTRY 纹饰、
+  损耗 123 点，最大耐久改为嘉豪数值，三个输入各消费一个。
+- `everySlotClearsTimeStopDodgeAndQuotes`：分别移除头、胸、腿、脚，实际处于稳定地面演出
+  和时间暂停；最迟下一服务器 Tick 清持久化标记、释放世界和服务端演出输入锁，
+  旁观者每轮最新语录消息均为取消、最新时间消息均为 inactive。
+  各栏位另外在闪避期间移除，动作与形态被清除。缺装备立即拒绝时间、闪避和手动语录。
+  重穿全套不自动变身，完整装备实际属性为 21 护甲、10 韧性。
+- `oldSaveWithoutArmorClearsFlagOnLogin`：写入真实磁盘玩家数据，确认其中仍有旧的开启附件
+  但没有装备，再用相同身份执行真实登录加载。JOIN 清除持久化标记且不重播雨天；
+  登录后穿齐也不会自动恢复。旧生命周期测试仍覆盖 NBT/磁盘、死亡丢装备、keepInventory
+  保留装备、下界来回及活体重生。
+
+EmbeddedChannel 不参加 ServerNetworkIo，清理夹具与既有闪避测试一样每 Tick 驱动真实
+networkHandler.tick；没有绕过原版装备属性更新或人工直接添加护甲属性。
+测试传送先确认旧请求再设置并同步位置，避免旧登录传送把演员移离旁观者。
+重生校验安排在 Fabric 默认附件复制阶段之后，防止无装备的新实体被之后的复制重新开启标记。
+
+固定语录测试改为两个明确 ID，并验证随机池不含它们、立即开场、保护期间的优先级，
+第 74 Tick 不再发 CINEMATIC、失败回退不重复、正常结束间隔、V 冷却、取消与生命周期。
+原伤害断言加入真实护甲减伤；generic/fall 等原版绕过护甲的伤害仍保留原期望。
+
+### 真实客户端回归
+
+| 入口 | 本轮实际结果 |
+|---|---|
+| `gradlew.bat -I scripts/quote-smoke.gradle runClient` | PASSED；最终 BUILD SUCCESSFUL in 55s，立即固定台词、3 秒淡入淡出、V、头顶、换维度、清理 |
+| `gradlew.bat -I scripts/cinematic-smoke.gradle runClient` | CINEMATIC SMOKE PASSED；BUILD SUCCESSFUL in 1m 47s，三视角、镜头/Pose、盔甲复制动作、输入、死亡/维度/断开 |
+| `gradlew.bat -I scripts/weather-visual-smoke.gradle runClient` | WEATHER VISUAL SMOKE PASSED；BUILD SUCCESSFUL in 56s，真实雨雪、云、粒子、恢复和断开 |
+| `gradlew.bat -I scripts/dodge-smoke.gradle runClient` | PASSED；BUILD SUCCESSFUL in 54s，真实 C 键链路、盔甲演员、僵尸/箭/TNT/苦力怕、完美状态、Pose 和镜头恢复 |
+
+均使用 build/run 下的独立存档，没有修改日常 run/saves。检查正式盔甲正面、背面、
+兜帽口罩、裤腿、靴子和演出截图：没有紫黑缺失贴图，背部大白标、胸前小标和眼缝正常。
+128×64 RGBA 资源由真实客户端加载，检查透明 UV 留白和白色图案像素。
+初次过早截图尚未完成世界加载，随后延后首拍并补拍稳定正面；没有把天空截图作为外观验收。
+发现立即固定字幕与原版 Action Bar 靠得太近后，上移字幕并重跑语录/联机，最终截图两行清楚分开。
+
+### Dedicated Server、两个真实客户端与保存重进
+
+```powershell
+.\gradlew.bat -I scripts/armor-multiplayer-smoke.gradle -ParmorRole=server exportArmorLaunch
+.\gradlew.bat -I scripts/armor-multiplayer-smoke.gradle -ParmorRole=actor exportArmorLaunch
+.\gradlew.bat -I scripts/armor-multiplayer-smoke.gradle -ParmorRole=observer exportArmorLaunch
+python scripts/armor-multiplayer-smoke.py
+```
+
+Dedicated 仅绑定 `127.0.0.1:25577`。导出时复制各角色独立 Loom 启动配置，避免其他 smoke
+任务覆盖共享配置后改变启动行为。测试模组仅在显式使用脚本时加入，不进入发布 JAR。
+
+最终协调器输出 **ARMOR MULTIPLAYER AND DISK RELOAD ALL PASSED**，first/reload 两轮
+server、actor、observer 六个结果均 PASSED，所有客户端正常退出，服务器 stop 正常保存并以 0 退出。
+
+- A/B 都是真正独立 JVM 客户端；B 原版玩家跟踪看到 A 的四件装备和完整外观。
+- A 通过真实变身器 `interactItem` 成功变身、下雨、立即显示第一句；B 收到同一固定 ID，
+  确认准确中文，并在实际 framebuffer 显示头顶文字。
+- A 发送现有时间请求，自己看到立即字幕和电影镜头；B 看到第二句头顶文字，自己的镜头不被接管。
+- 同一会话经过第 74 Tick，观察消息记录无随机 TRANSFORM、TIME_STOP_START 或 CINEMATIC 开场。
+- 演出/冻结期间服务器移除 A 头盔，两客户端确认形态失效、冻结解除、输入与镜头恢复、
+  台词取消，世界昼夜时间重新前进；重穿全套不自动变身。
+- A 再次成功变身后正常断开并保存，服务器彻底退出。重新启动同一磁盘世界与相同两个身份，
+  A 装备和形态恢复；没有重播固定台词，没有恢复时间暂停或演出。再脱装备、重穿仍安全清理。
+
+服务器移除装备测试覆盖服务端权威清理；没有将其宣称为人工操作库存界面的手感测试。
+真实眼缝宽度、标识线条和深色布料明暗仍可由用户按审美调整；当前版本已经可直接测试使用。
+本轮未新增 Shader 或第三方战斗模组兼容验收。
+
+### 发布与本地证据
+
+发布 `build/libs/jiahao-mode-1.0.0.jar` 已检查六张 PNG、四份新模型、四份配方及现有变身器模型
+全部包含；45 条语录键中英文一致，固定中文逐字正确。没有测试类、测试 Mixin、测试入口或测试伤害类型。
+main/client 边界与既有业务 Mixin 配置保持；Dedicated 实际启动成功。
+Git diff 无空白错误，build/run/.gradle/logs/crash-reports、截图和导出运行参数均被排除。
+
+本地证据（不提交）：
+
+- `build/armor-final-build.log`、`build/armor-release-verification.txt`
+- `build/armor-{quote,cinematic,weather,dodge}-regression.log`
+- `build/armor-export-{server,actor,observer}.log`
+- `build/armor-multiplayer-coordinator.log`、`build/armor-multiplayer-{first,reload}-{server,actor,observer}.log`
+- `build/run/armorDedicated/armor-server-result.txt`
+- `build/run/armor{Actor,Observer}/armor-client-result.txt`
+- `build/run/armorActor/screenshots/actor-armor-front.png`、`actor-armor-front-stable.png`、`actor-armor-back.png`
+- `build/run/armorActor/screenshots/actor-transform.png`、`actor-time-notice.png`、`actor-restored-control.png`
+- `build/run/armorObserver/screenshots/observer-transform-bubble.png`、`observer-time-bubble.png`、`observer-restored-world.png`
+
+原有环境级 JDK/native-access/Unsafe/LWJGL、山羊音效、shader sampler、Mojang 公钥/TLS 及
+offline-mode 聊天验证提示仍存在，未阻止本轮构建、资源显示、保存或正常退出。
+
 本地运行证据（不提交）：
 
 - `build/dodge-build.log`

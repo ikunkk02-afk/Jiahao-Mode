@@ -11,11 +11,15 @@ Yarn **1.21.1+build.3**. Mod ID: `jiahao-mode`.
 /give @s jiahao-mode:jiahao_transformer
 ```
 
-物品也加入了原版“工具与实用物品”创造栏。手持右键切换嘉豪形态，不消耗
+物品也加入了原版“工具与实用物品”创造栏。先穿齐嘉豪头盔、胸甲、护腿和靴子，
+再手持右键切换嘉豪形态，不消耗
 物品，没有耐久。进入时播放信标音效和 Action Bar 提示，并让当前支持天气的
 维度立即下雨约 5 分钟。解除时播放较轻的音效和提示，不清除天气。
 
-玩家退出重进、死亡重生和切换维度均保留形态。恢复状态不会再次触发演出或下雨。
+缺少任何一件时显示“你必须穿上整套嘉豪盔甲”。形态中脱掉任何一件，最迟下一服务器
+Tick 自动解除，同时结束时间暂停、闪避、演出和字幕。重新穿齐需要再次使用变身器。
+退出重进和切换维度穿齐装备时保留形态；死亡重生实际保留整套装备才保留形态。
+恢复状态不会再次触发演出、台词或下雨。
 无天空维度跳过天气修改；沙漠等生物群系遵循原版降水规则。
 
 ## 嘉豪时刻
@@ -55,12 +59,13 @@ JiahaoStateManager.setJiahao(serverPlayer, true);
 boolean newState = JiahaoStateManager.toggleJiahao(serverPlayer);
 ```
 
-`isJiahao(PlayerEntity)` 可以查询服务端权威状态或客户端的同步副本；客户端收到
+`isJiahao(PlayerEntity)` 查询“保存的形态标记开启且穿齐整套盔甲”；客户端收到
 更新前可能稍有延迟。`setJiahao` / `toggleJiahao` 只接受 `ServerPlayerEntity`，
 必须在服务端线程调用。重复设置相同值不播放反馈，不修改天气。
 
 `state.JiahaoState` 封装 Fabric 数据附件注册，使用 `Codec.BOOL` 保存到玩家 NBT：
-`fabric:attachments` → `jiahao-mode:jiahao_state`。使用 `copyOnDeath()` 保留重生状态，
+`fabric:attachments` → `jiahao-mode:jiahao_state`。使用 `copyOnDeath()` 复制重生状态，
+再按重生后实际装备校验；装备缺失会清除标记。
 Fabric 自动同步到玩家自己以及正在跟踪该玩家的客户端。形态保存本身无需直接操作
 NBT、自定义网络协议或第三方状态库；时间暂停另外使用服务器权威网络包和条件 Mixin。
 
@@ -110,9 +115,21 @@ The initial project was created with the Fabric Template Generator. The Fabric
 template is distributed under CC0; its original license is preserved in
 [LICENSE-FABRIC-TEMPLATE](LICENSE-FABRIC-TEMPLATE).
 
+## 第六阶段：嘉豪盔甲
+
+黑色/深灰的兜帽口罩服装甲，胸前与背后有白色 AW 风格标识，采用原版盔甲模型和正式
+128×64 layer 贴图。四件物品 ID 为 `jiahao-mode:jiahao_helmet`、`jiahao-mode:jiahao_chestplate`、
+`jiahao-mode:jiahao_leggings`、`jiahao-mode:jiahao_boots`。
+锻造台使用黑色染料作为模板、对应钻石盔甲作为基础、回声碎片作为添加材料。
+整套护甲 21、韧性 10、击退抗性 0.20，耐久较钻石增加约 12.1%，使用钻石修复。
+获取命令、资产路径、穿戴清理和固定台词接入见 [ARMOR.md](ARMOR.md)。
+
 ## 第四阶段：嘉豪语录
 
-嘉豪形态下按 **V** 随机说话（可改键，2.5 秒冷却）。进入形态约 1 秒后自动说话；嘉豪时刻正面特写在进度 0.74 出现“世界，安静一点。”。本人看电影字幕，附近玩家看头顶文字。文本支持中英文，本阶段无新增语音。
+嘉豪形态下按 **V** 随机说话（可改键，2.5 秒冷却）。成功变身立即显示固定台词
+“10年前的仇难道不报了吗”；成功启动嘉豪时刻立即显示“注意时间并没有静止”。
+这两句独立于随机池，优先级 50、持续 3 秒；开始与演出中段不会再叠加随机开场。
+本人看电影字幕，附近玩家看头顶文字。文本支持中英文，无新增语音。
 
 实现、扩展方式和测试入口见 [QUOTES.md](QUOTES.md)，实际验证记录见 [TESTING.md](TESTING.md)。
 

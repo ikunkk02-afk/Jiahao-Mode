@@ -28,7 +28,7 @@ public final class DodgeMultiplayerServer implements ModInitializer {
             boolean actor=p.getGameProfile().getName().equals("DodgeActor");
             p.changeGameMode(GameMode.SURVIVAL);p.getAbilities().flying=false;
             p.teleport(w,.5,181,actor?.5:6.5,actor?0:180,0);
-            JiahaoStateManager.setJiahao(p,actor);
+            if(actor)equipArmor(p); JiahaoStateManager.setJiahao(p,actor);
         });
         ServerTickEvents.END_SERVER_TICK.register(server->{
             if(!server.isDedicated()||passed)return;
@@ -48,4 +48,11 @@ public final class DodgeMultiplayerServer implements ModInitializer {
             } catch(Throwable e) {passed=true;try{Files.writeString(Path.of("dodge-server-result.txt"),"FAILED: "+e);}catch(Exception ignored){}e.printStackTrace();}
         });
     }
+
+ private static void equipArmor(net.minecraft.server.network.ServerPlayerEntity p) {
+  p.equipStack(net.minecraft.entity.EquipmentSlot.HEAD,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_HELMET));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_CHESTPLATE));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.LEGS,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_LEGGINGS));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.FEET,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_BOOTS));
+ }
 }

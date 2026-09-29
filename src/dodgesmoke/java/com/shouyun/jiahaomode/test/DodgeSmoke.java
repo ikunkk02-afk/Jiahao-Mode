@@ -119,7 +119,7 @@ public final class DodgeSmoke implements ClientModInitializer {
                 pressC(c); stage=2; ticks=0;
             } else if(stage==2&&ticks>15) {
                 check(!JiahaoDodgeClientController.locksMovement(),"Normal form cannot dodge");
-                c.getServer().execute(()->JiahaoStateManager.setJiahao(c.getServer().getPlayerManager().getPlayer(c.player.getUuid()),true)); stage=3;ticks=0;
+                c.getServer().execute(()->{var p=c.getServer().getPlayerManager().getPlayer(c.player.getUuid());equipArmor(p);JiahaoStateManager.setJiahao(p,true);}); stage=3;ticks=0;
             } else if(stage==3&&ticks>35) {
                 c.options.leftKey.setPressed(true); pressC(c); stage=4;ticks=0;
             } else if(stage==4) {
@@ -158,4 +158,11 @@ public final class DodgeSmoke implements ClientModInitializer {
         c.scheduleStop();
     }
     private static void check(boolean condition,String why) {if(!condition)throw new AssertionError(why);}
+
+ private static void equipArmor(net.minecraft.server.network.ServerPlayerEntity p) {
+  p.equipStack(net.minecraft.entity.EquipmentSlot.HEAD,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_HELMET));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_CHESTPLATE));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.LEGS,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_LEGGINGS));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.FEET,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_BOOTS));
+ }
 }

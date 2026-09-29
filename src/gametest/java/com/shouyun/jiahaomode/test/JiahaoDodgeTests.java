@@ -93,6 +93,9 @@ public final class JiahaoDodgeTests implements FabricGameTest {
         }
         void check(boolean value,String why) { c.assertTrue(value,why); }
     }
+    private static float armoredDamage(float raw) {
+        return raw * (1 - Math.max(4.2f, Math.min(20f, 21 - raw / 4.5f)) / 25f);
+    }
     @GameTest(templateName=EMPTY_STRUCTURE, batchId="jiahao_dodge_math")
     public void directionAndClassification(TestContext c) {
         for(float yaw : new float[]{0,90,180,-90,33}) {
@@ -183,14 +186,14 @@ public final class JiahaoDodgeTests implements FabricGameTest {
         // Vanilla login protection has to expire before checking real damage.
         c.waitAndRun(63,()->{
             f.reset();var mob=new ZombieEntity(c.getWorld());mob.setPosition(p.getPos().add(0,0,1));
-            f.check(p.damage(p.getDamageSources().mobAttack(mob),4)&&p.getHealth()==16,"Damage before a late request cannot be retroactively canceled");
+            f.check(p.damage(p.getDamageSources().mobAttack(mob),4)&&Math.abs(p.getHealth()-(20-armoredDamage(4)))<.0001,"Damage before a late request cannot be retroactively canceled");
         });
         c.waitAndRun(65,()->{
             f.reset(); var mob=new ZombieEntity(c.getWorld()); mob.setPosition(f.origin.add(0,0,1));
             f.check(JiahaoDodgeManager.startDodge(p,4),"Damage dodge starts");
             f.check(!p.damage(p.getDamageSources().mobAttack(mob),4)&&p.getHealth()==20,"Perfect cancels real melee pipeline");
             f.check(JiahaoDodgeManager.state(p).perfectTriggered,"Opportunity consumed");
-            f.check(p.damage(p.getDamageSources().mobAttack(mob),4)&&p.getHealth()==16,"Same action second hit applies");
+            f.check(p.damage(p.getDamageSources().mobAttack(mob),4)&&Math.abs(p.getHealth()-(20-armoredDamage(4)))<.0001,"Same action second hit applies");
             f.check(JiahaoDodgeManager.getPerfectDodgeCombo(p)==1,"Combo recorded once");
             f.check(!JiahaoDodgeManager.isPerfectWindow(p),"Consumed window unavailable");
         });
@@ -198,7 +201,7 @@ public final class JiahaoDodgeTests implements FabricGameTest {
         c.waitAndRun(94,()->{
             f.reset(); f.check(JiahaoDodgeManager.startDodge(p,0),"Next dodge");
             p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource().withLevel(4),"damage @s 2 minecraft:arrow");
-            f.check(p.getHealth()==18&&!JiahaoDodgeManager.state(p).perfectTriggered,"Typed administrative damage cannot be dodged: health="+p.getHealth());
+            f.check(Math.abs(p.getHealth()-(20-armoredDamage(2)))<.0001&&!JiahaoDodgeManager.state(p).perfectTriggered,"Typed administrative damage cannot be dodged: health="+p.getHealth());
         });
         c.waitAndRun(123,()->{
             f.reset(); f.check(JiahaoDodgeManager.startDodge(p,0),"Explosion dodge");
@@ -257,7 +260,7 @@ public final class JiahaoDodgeTests implements FabricGameTest {
         });
         c.waitAndRun(94,()->{f.reset();f.check(JiahaoDodgeManager.startDodge(p,0),"Late window start");});
         c.waitAndRun(98,()->{
-            f.check(p.damage(p.getDamageSources().arrow(new ArrowEntity(EntityType.ARROW,c.getWorld()),null),4)&&p.getHealth()==16,"Tick 4 arrow applies normal damage");
+            f.check(p.damage(p.getDamageSources().arrow(new ArrowEntity(EntityType.ARROW,c.getWorld()),null),4)&&Math.abs(p.getHealth()-(20-armoredDamage(4)))<.0001,"Tick 4 arrow applies normal damage");
         });
         c.waitAndRun(105,f::done);
     }
@@ -302,11 +305,11 @@ public final class JiahaoDodgeTests implements FabricGameTest {
         f.check(JiahaoDodgeManager.getCooldownTicks(p)==0,"Disconnect forgets old history");f.done();
         });
     }
-    @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_dodge_cooldown",tickLimit=150)
+    @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_dodge_cooldown",tickLimit=230)
     public void cooldownQuoteAndComboBoundaries(TestContext c) {
         var f=new Fixture(c,"DodgeCooldown");var p=f.p;JiahaoStateManager.setJiahao(p,true);
-        c.waitAndRun(2,()->{f.reset();f.check(JiahaoDodgeManager.startDodge(p,0),"Boundary action starts");});
-        c.waitAndRun(10,()->{
+        c.waitAndRun(62,()->{f.reset();f.check(JiahaoDodgeManager.startDodge(p,0),"Boundary action starts");});
+        c.waitAndRun(70,()->{
             f.acknowledge();f.check(JiahaoQuoteManager.perfectDodge(p),"First eligible perfect quote always plays");
             final boolean[] lastTickSeen={false};
             REAL_TIME_CHECKS.add(new RealTimeCheck(f,JiahaoTimeStopManager.getServerTick(p.getServer()),elapsed -> {
@@ -316,21 +319,21 @@ public final class JiahaoDodgeTests implements FabricGameTest {
                 return false;
             }));
         });
-        c.waitAndRun(65,()->{
+        c.waitAndRun(125,()->{
             f.reset();f.check(!JiahaoQuoteManager.perfectDodge(p),"Expired subtitle does not bypass 80-tick quote cooldown");
             f.check(JiahaoDodgeManager.startDodge(p,0),"First combo action starts");
             var mob=new ZombieEntity(c.getWorld());mob.setPosition(p.getPos().add(0,0,1));boolean applied=p.damage(p.getDamageSources().mobAttack(mob),3);
             f.check(JiahaoDodgeManager.getPerfectDodgeCombo(p)==1,"First perfect counts once: applied="+applied+", health="+p.getHealth()+", consumed="+JiahaoDodgeManager.state(p).perfectTriggered+", window="+JiahaoDodgeManager.isPerfectWindow(p));
         });
-        c.waitAndRun(90,()->{
+        c.waitAndRun(150,()->{
             f.reset();f.check(JiahaoQuoteManager.perfectDodge(p),"Exactly 80 ticks since successful quote allows playback");
         });
-        c.waitAndRun(94,()->{
+        c.waitAndRun(154,()->{
             f.reset();f.check(JiahaoDodgeManager.startDodge(p,0),"Second combo action starts");
             var mob=new ZombieEntity(c.getWorld());mob.setPosition(p.getPos().add(0,0,1));p.damage(p.getDamageSources().mobAttack(mob),3);
             f.check(JiahaoDodgeManager.getPerfectDodgeCombo(p)==2,"Perfect successes within 60 ticks accumulate");
         });
-        c.waitAndRun(104,f::done);
+        c.waitAndRun(164,f::done);
     }
     @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_dodge_resumed_projectile",tickLimit=200)
     public void resumedProjectileUsesNormalPerfectWindow(TestContext c) {

@@ -26,7 +26,7 @@ public final class JiahaoQuoteManager {
  }
  private static final class State {
   Identifier dimension; Vec3d position;
-  long transformAt=-1,idleAt,until,endAt=-1,cinematicAt;
+  long idleAt,until,endAt=-1;
   int priority; boolean lowLatched,lowPending,cueSent;
   UUID session;
   final Set<UUID> recipients=new HashSet<>();
@@ -40,7 +40,7 @@ public final class JiahaoQuoteManager {
  private static boolean valid(ServerPlayerEntity p){return p.isAlive()&&!p.isRemoved()&&JiahaoStateManager.isJiahao(p);}
  public static void track(ServerPlayerEntity p){if(valid(p))runtime(p.getServer()).active.computeIfAbsent(p.getUuid(),id->new State(p,now(p)));}
  public static void formChanged(ServerPlayerEntity p,boolean enabled){
-  clear(p,false);if(enabled&&valid(p)){track(p);runtime(p.getServer()).active.get(p.getUuid()).transformAt=now(p)+20;}
+  clear(p,false);if(enabled&&valid(p)){track(p);emitFixed(p,JiahaoQuoteRegistry.TRANSFORM_REVENGE);}
  }
  public static void clear(ServerPlayerEntity p,boolean forget){
   Runtime r=runtime(p.getServer());State s=r.active.remove(p.getUuid());
@@ -68,10 +68,20 @@ public final class JiahaoQuoteManager {
   if(category==PERFECT_DODGE&&(t<h.perfectUntil||JiahaoTimeStopManager.isCinematicLocked(p)))return false;
   if(!special&&category!=MANUAL&&t<h.ordinaryUntil)return false;
   var quote=JiahaoQuoteRegistry.select(category,h.last,h.lastCategory.get(category),bound->p.getRandom().nextInt(bound));
-  s.until=t+quote.displayTicks();s.priority=quote.priority();
-  h.last=quote.id();h.lastCategory.put(category,quote.id());h.ordinaryUntil=t+60;
   if(category==MANUAL)h.manualUntil=t+50;
   if(category==PERFECT_DODGE)h.perfectUntil=t+80;
+  return publish(p,s,r,h,quote,session,t);
+ }
+ /** Scripted IDs are server-only and never selected from a random pool. Equal-priority scripts may replace each other. */
+ public static boolean emitFixed(ServerPlayerEntity p,Identifier id){
+  if(!valid(p)||!JiahaoQuoteRegistry.isFixed(id))return false;
+  track(p);Runtime r=runtime(p.getServer());State s=r.active.get(p.getUuid());
+  History h=r.histories.computeIfAbsent(p.getUuid(),ignored->new History());
+  return publish(p,s,r,h,JiahaoQuoteRegistry.get(id),null,now(p));
+ }
+ private static boolean publish(ServerPlayerEntity p,State s,Runtime r,History h,JiahaoQuote quote,UUID session,long t){
+  s.until=t+quote.displayTicks();s.priority=quote.priority();
+  h.last=quote.id();h.lastCategory.put(quote.category(),quote.id());h.ordinaryUntil=t+60;
   var payload=new JiahaoQuoteSyncPayload(p.getUuid(),s.dimension,quote.id(),++r.sequence,session);
   for(var recipient:p.getServerWorld().getPlayers()) {
    if(recipient.squaredDistanceTo(p)<=64*64&&ServerPlayNetworking.canSend(recipient,JiahaoQuoteSyncPayload.ID)) {
@@ -82,11 +92,10 @@ public final class JiahaoQuoteManager {
  }
  public static void timeStarted(ServerPlayerEntity p,UUID session,boolean cinematic){
   track(p);State s=runtime(p.getServer()).active.get(p.getUuid());if(s==null)return;
-  activity(p);s.transformAt=-1;s.endAt=-1;s.session=session;s.cueSent=false;s.cinematicAt=now(p)+74;
-  if(cinematic) {cancel(p,s,runtime(p.getServer()));}
-  else fallback(p,s);
+  activity(p);s.endAt=-1;s.session=session;s.cueSent=true;
+  emitFixed(p,JiahaoQuoteRegistry.TIME_STOP_NOTICE);
  }
- private static void fallback(ServerPlayerEntity p,State s){if(!s.cueSent){s.cueSent=true;emit(p,TIME_STOP_START,null);}}
+ private static void fallback(ServerPlayerEntity p,State s){if(!s.cueSent){s.cueSent=true;emitFixed(p,JiahaoQuoteRegistry.TIME_STOP_NOTICE);}}
  public static void cinematicStopped(ServerPlayerEntity p,UUID session){
   State s=runtime(p.getServer()).active.get(p.getUuid());if(s!=null&&session.equals(s.session))fallback(p,s);
  }
@@ -123,11 +132,7 @@ public final class JiahaoQuoteManager {
    if(!valid(p)||!s.dimension.equals(p.getWorld().getRegistryKey().getValue())){clear(p,false);continue;}
    if(s.until>0&&tick>=s.until){s.until=0;s.priority=0;}
    if(p.getPos().squaredDistanceTo(s.position)>.0001){s.position=p.getPos();activity(p);}
-   if(s.session!=null&&!s.cueSent&&tick>=s.cinematicAt){
-    s.cueSent=true;emit(p,CINEMATIC,s.session);
-   }
    if(s.endAt>=0&&tick>=s.endAt&&emit(p,TIME_STOP_END,null))s.endAt=-1;
-   if(s.transformAt>=0&&tick>=s.transformAt){s.transformAt=-1;emit(p,TRANSFORM,null);}
    health(p);
    if(tick>=s.idleAt){s.idleAt=tick+600;if(!JiahaoTimeStopManager.shouldFreeze(p)&&p.getRandom().nextFloat()<.1f)emit(p,IDLE,null);}
   }

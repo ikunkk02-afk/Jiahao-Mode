@@ -35,10 +35,11 @@ public final class JiahaoQuoteTests implements FabricGameTest {
    for(var connection:List.of(a,b,far,otherDimension)){connection.player().getAbilities().flying=true;connection.player().setNoGravity(true);}
    check(!JiahaoQuoteManager.manual(a.player()),"Normal player cannot request quote");
    JiahaoStateManager.setJiahao(a.player(),true);JiahaoStateManager.setJiahao(a.player(),false);
+   for(var connection:List.of(a,b,far,otherDimension))connection.channel().outboundMessages().clear();
    start=JiahaoTimeStopManager.getServerTick(server);
    for(var cat:JiahaoQuoteCategory.values()){
     Identifier previous=null;
-    for(int i=0;i<30;i++){var q=JiahaoQuoteRegistry.select(cat,previous,previous,bound->0);check(cat.count==1||!q.id().equals(previous),"No repeated selection "+cat);previous=q.id();}
+    for(int i=0;i<30;i++){var q=JiahaoQuoteRegistry.select(cat,previous,previous,bound->0);check(!JiahaoQuoteRegistry.isFixed(q.id()),"Fixed lines never enter random pools");check(cat.count==1||!q.id().equals(previous),"No repeated selection "+cat);previous=q.id();}
    }
   }
   JiahaoTransformationTests.TestPlayerConnection connect(String name){
@@ -53,11 +54,11 @@ public final class JiahaoQuoteTests implements FabricGameTest {
    try {
     var p=a.player();
     if(t==25){check(quotes(a).isEmpty(),"Canceled transform never fires");JiahaoStateManager.setJiahao(p,true);}
-    if(t==44)check(quotes(a).isEmpty(),"Transform waits 20 ticks");
-    if(t==46){check(count(TRANSFORM)==1,"One delayed transform");check(quotes(b).size()==1,"64 block recipient included");check(quotes(far).isEmpty()&&quotes(otherDimension).isEmpty(),"Far and other dimension excluded");}
+    if(t==44)check(count(TRANSFORM)==1&&quotes(a).getLast().quote().equals(JiahaoQuoteRegistry.TRANSFORM_REVENGE),"Scripted transform is immediate and unique");
+    if(t==46){check(count(TRANSFORM)==1,"One scripted transform");check(quotes(b).size()==1,"64 block recipient included");check(quotes(far).isEmpty()&&quotes(otherDimension).isEmpty(),"Far and other dimension excluded");}
     if(t==105){check(JiahaoQuoteManager.manual(p),"Manual allowed");manual=quotes(a).getLast().quote();for(int i=0;i<100;i++)check(!JiahaoQuoteManager.manual(p),"Spam rejected");JiahaoStateManager.setJiahao(p,false);JiahaoStateManager.setJiahao(p,true);check(!JiahaoQuoteManager.manual(p),"Form toggle does not reset cooldown");}
-    if(t==154)check(!JiahaoQuoteManager.manual(p),"Manual 49 ticks blocked");
-    if(t==155){check(JiahaoQuoteManager.manual(p),"Manual boundary 50 allowed");check(!manual.equals(quotes(a).getLast().quote()),"Consecutive manual differs");}
+    if(t==164)check(!JiahaoQuoteManager.manual(p),"Fixed transform protects its entire display");
+    if(t==165){check(JiahaoQuoteManager.manual(p),"Manual allowed after fixed display and retained cooldown");check(!manual.equals(quotes(a).getLast().quote()),"Consecutive manual differs");}
     if(t==220)p.setHealth(5);
     if(t==280){check(count(LOW_HEALTH)==1,"Low stage fires once");p.setHealth(10);}
     if(t==282)p.setHealth(5);
@@ -66,15 +67,15 @@ public final class JiahaoQuoteTests implements FabricGameTest {
     if(t==355){check(count(LOW_HEALTH)==2,"Above 50 rearms");p.setHealth(20);session=UUID.randomUUID();JiahaoQuoteManager.timeStarted(p,session,true);}
     if(t==356){check(!JiahaoQuoteManager.manual(p),"Cinematic reservation blocks manual");JiahaoQuoteManager.playbackFailed(p,UUID.randomUUID());}
     if(t==428)check(count(CINEMATIC)==0,"Cue never early");
-    if(t==430){check(count(CINEMATIC)==1,"Cue at 74");JiahaoQuoteManager.cinematicStopped(p,session);check(count(TIME_STOP_START)==0,"No duplicate start fallback");JiahaoQuoteManager.timeEnded(p,session,true);}
-    if(t==479)check(count(TIME_STOP_END)==0,"End waits for cue plus gap");
+    if(t==430){check(count(CINEMATIC)==0,"No delayed cinematic duplicate");JiahaoQuoteManager.cinematicStopped(p,session);check(count(TIME_STOP_START)==1&&quotes(a).getLast().quote().equals(JiahaoQuoteRegistry.TIME_STOP_NOTICE),"One immediate fixed time notice, no fallback duplicate");JiahaoQuoteManager.timeEnded(p,session,true);}
+    if(t==479)check(count(TIME_STOP_END)==1,"End follows completed fixed notice");
     if(t==485)check(count(TIME_STOP_END)==1,"End eventually emitted once");
-    if(t==550){session=UUID.randomUUID();JiahaoQuoteManager.timeStarted(p,session,false);check(count(TIME_STOP_START)==1,"No cinematic start fallback");JiahaoQuoteManager.cinematicStopped(p,session);check(count(TIME_STOP_START)==1,"Fallback idempotent");JiahaoQuoteManager.timeEnded(p,session,true);}
-    if(t==670){p.setHealth(20);seed(p,true);JiahaoQuoteManager.damage(p,1);check(count(TAKE_DAMAGE)==0,"Small damage excluded");seed(p,false);JiahaoQuoteManager.damage(p,4);check(count(TAKE_DAMAGE)==0,"Damage probability failure");seed(p,true);JiahaoQuoteManager.damage(p,4);check(count(TAKE_DAMAGE)==1,"Damage probability success");}
-    if(t==735){seed(p,false);JiahaoQuoteManager.killed(p);check(count(KILL_ENTITY)==0,"Kill probability failure");seed(p,true);JiahaoQuoteManager.killed(p);check(count(KILL_ENTITY)==1,"Kill probability success");}
+    if(t==550){session=UUID.randomUUID();JiahaoQuoteManager.timeStarted(p,session,false);check(count(TIME_STOP_START)==2,"Second session emits its fixed notice");JiahaoQuoteManager.cinematicStopped(p,session);check(count(TIME_STOP_START)==2,"Fallback idempotent");JiahaoQuoteManager.timeEnded(p,session,true);}
+    if(t==680){p.setHealth(20);seed(p,true);JiahaoQuoteManager.damage(p,1);check(count(TAKE_DAMAGE)==0,"Small damage excluded");seed(p,false);JiahaoQuoteManager.damage(p,4);check(count(TAKE_DAMAGE)==0,"Damage probability failure");seed(p,true);JiahaoQuoteManager.damage(p,4);check(count(TAKE_DAMAGE)==1,"Damage probability success");}
+    if(t==745){seed(p,false);JiahaoQuoteManager.killed(p);check(count(KILL_ENTITY)==0,"Kill probability failure");seed(p,true);JiahaoQuoteManager.killed(p);check(count(KILL_ENTITY)==1,"Kill probability success");}
     if(t==800){JiahaoStateManager.setJiahao(p,false);seed(p,true);JiahaoQuoteManager.killed(p);check(count(KILL_ENTITY)==1,"Normal kill ignored");JiahaoStateManager.setJiahao(p,true);JiahaoQuoteManager.clear(p,false);JiahaoQuoteManager.track(p);}
-    if(t==830){
-     check(count(TRANSFORM)==1,"Cleared delay cannot leak");
+    if(t==865){
+     check(count(TRANSFORM)==3,"Only successful form transitions emit fixed transforms");
      var source=p.getServerWorld().getDamageSources().playerAttack(p);
      var armor=net.minecraft.entity.EntityType.ARMOR_STAND.create(p.getServerWorld());
      var cow=net.minecraft.entity.EntityType.COW.create(p.getServerWorld());
@@ -85,21 +86,21 @@ public final class JiahaoQuoteTests implements FabricGameTest {
      zombie.setPosition(p.getPos());p.getServerWorld().spawnEntity(zombie);seed(p,true);check(zombie.damage(source,1000),"Actual zombie kill succeeds");
      check(count(KILL_ENTITY)==2,"Hostile death event routes to quote manager");
     }
-    if(t==895){
+    if(t==930){
      check(JiahaoQuoteManager.manual(p),"Manual before dimension switch");
      p.teleportTo(new net.minecraft.world.TeleportTarget(server.getWorld(World.NETHER),new Vec3d(0,100,0),Vec3d.ZERO,0,0,net.minecraft.world.TeleportTarget.NO_OP));
      check(!JiahaoQuoteManager.manual(p),"Dimension switch retains manual cooldown");
      check(a.channel().outboundMessages().stream().anyMatch(packet->packet instanceof CustomPayloadS2CPacket cp&&cp.payload() instanceof JiahaoQuoteSyncPayload quote&&quote.quote()==null),"Lifecycle sends cancel packet");
     }
-    if(t==925){p.teleportTo(new net.minecraft.world.TeleportTarget(context.getWorld(),new Vec3d(0,100,0),Vec3d.ZERO,0,0,net.minecraft.world.TeleportTarget.NO_OP));p.setNoGravity(true);p.getAbilities().flying=true;}
-    if(t==940){
+    if(t==970){p.teleportTo(new net.minecraft.world.TeleportTarget(context.getWorld(),new Vec3d(0,100,0),Vec3d.ZERO,0,0,net.minecraft.world.TeleportTarget.NO_OP));p.setNoGravity(true);p.getAbilities().flying=true;}
+    if(t==990){
      p.onTeleportationDone();p.changeGameMode(net.minecraft.world.GameMode.SURVIVAL);p.setHealth(20);p.timeUntilRegen=0;
      check(p.damage(p.getServerWorld().getDamageSources().generic(),1),"Actual damage method succeeds");
-     check(p.getHealth()==19&&count(TAKE_DAMAGE)==1,"Actual damage mixin excludes small hits");p.changeGameMode(net.minecraft.world.GameMode.CREATIVE);p.setHealth(20);
+     check(p.getHealth()==19&&count(TAKE_DAMAGE)==1,"Actual armor-bypassing generic damage excludes small hits: health="+p.getHealth()+", count="+count(TAKE_DAMAGE));p.changeGameMode(net.minecraft.world.GameMode.CREATIVE);p.setHealth(20);
     }
-    if(t==960)JiahaoQuoteManager.activity(p);
-    if(t==1559){check(count(IDLE)==0,"Idle cannot fire before 30 seconds");seed(p,true);}
-    if(t==1561){check(count(IDLE)==1,"Idle probability success at 30 second boundary");finish();context.runAtTick(context.getTick()+1,context::complete);return true;}
+    if(t==1010)JiahaoQuoteManager.activity(p);
+    if(t==1609){check(count(IDLE)==0,"Idle cannot fire before 30 seconds");seed(p,true);}
+    if(t==1611){check(count(IDLE)==1,"Idle probability success at 30 second boundary");finish();context.runAtTick(context.getTick()+1,context::complete);return true;}
    }catch(Throwable error){finish();context.runAtTick(context.getTick()+1,()->context.throwGameTestException(error.toString()));return true;}
    return false;
   }

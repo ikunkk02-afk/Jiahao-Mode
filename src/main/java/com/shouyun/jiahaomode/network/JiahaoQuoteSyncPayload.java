@@ -6,7 +6,7 @@ import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 import java.util.UUID;
-/** Null quote means cancel; session is present only for the cinematic cue. */
+/** Null quote means cancel; optional session defers a legacy cinematic cue, scripted lines display immediately. */
 public record JiahaoQuoteSyncPayload(UUID player, Identifier dimension, Identifier quote,long event,UUID session) implements CustomPayload {
  public static final Id<JiahaoQuoteSyncPayload> ID=new Id<>(JiahaoMode.id("quote_sync"));
  public static final PacketCodec<RegistryByteBuf,JiahaoQuoteSyncPayload> CODEC=new PacketCodec<>() {

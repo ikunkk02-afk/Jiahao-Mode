@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-armor-smoke",
+  "version": "1.0.0",
+  "name": "Isolated Jiahao Armor Integration Checks",
+  "environment": "*",
+  "license": "MIT",
+  "entrypoints": {
+    "main": ["com.shouyun.jiahaomode.test.armor.ArmorSmokeServer"],
+    "client": ["com.shouyun.jiahaomode.test.armor.ArmorSmokeClient"]
+  },
+  "mixins": [{"config": "armor-smoke.mixins.json", "environment": "client"}],
+  "depends": {"jiahao-mode": "*", "fabric-api": "*"}
+}

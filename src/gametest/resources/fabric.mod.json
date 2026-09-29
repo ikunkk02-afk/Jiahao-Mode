@@ -11,6 +11,7 @@
     ],
     "fabric-gametest": [
       "com.shouyun.jiahaomode.test.JiahaoTransformationTests",
+      "com.shouyun.jiahaomode.test.JiahaoArmorTests",
       "com.shouyun.jiahaomode.test.JiahaoTimeStopTests",
       "com.shouyun.jiahaomode.test.JiahaoCinematicTests",
       "com.shouyun.jiahaomode.test.JiahaoQuoteTests",

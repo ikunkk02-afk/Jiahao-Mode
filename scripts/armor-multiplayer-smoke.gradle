@@ -1,0 +1,48 @@
+// Export the configured Loom launch commands for one isolated server and two real clients.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('armorSmoke')
+        smoke.java.setSrcDirs(['src/armorsmoke/java'])
+        smoke.resources.setSrcDirs(['src/armorsmoke/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-armor-smoke') { sourceSet smoke }
+        def role = project.findProperty('armorRole') ?: 'actor'
+        def isolatedDirectory = project.file(role == 'server' ? 'build/run/armorDedicated' : "build/run/armor${role.capitalize()}")
+        loom.runs.server {
+            runDir 'build/run/armorDedicated'
+            programArgs 'nogui'
+        }
+        loom.runs.client {
+            runDir "build/run/armor${role.capitalize()}"
+            programArgs '--username', role == 'observer' ? 'ArmorObserver' : 'ArmorActor',
+                    '--quickPlayMultiplayer', '127.0.0.1:25577', '--width', '960', '--height', '540'
+        }
+        ['runServer', 'runClient'].each { name ->
+            tasks.named(name) { dependsOn tasks.named('armorSmokeClasses'); classpath += smoke.output }
+        }
+        tasks.register('exportArmorLaunch') {
+            dependsOn tasks.named('armorSmokeClasses'), tasks.named('configureLaunch'), tasks.named('generateDLIConfig')
+            def output = project.file("build/verification/armor-${role}-launch.json")
+            def originalConfig = project.file('.gradle/loom-cache/launch.cfg')
+            def isolatedConfig = project.file("build/verification/armor-${role}-launch.cfg")
+            def task = tasks.named(role == 'server' ? 'runServer' : 'runClient').get()
+            def launchSpec = [
+                executable: task.javaLauncher.get().executablePath.asFile.absolutePath,
+                directory: isolatedDirectory.absolutePath,
+                arguments: task.allJvmArgs.findAll { !it.startsWith('@') } + ['-classpath', task.classpath.asPath, task.mainClass.get()] +
+                    (role == 'server' ? ['nogui'] : ['--username', role == 'observer' ? 'ArmorObserver' : 'ArmorActor',
+                        '--quickPlayMultiplayer', '127.0.0.1:25577', '--width', '960', '--height', '540'])
+            ]
+            doLast {
+                output.parentFile.mkdirs()
+                // Other smoke tasks may regenerate Loom's shared config after this export.
+                isolatedConfig.text = originalConfig.text
+                launchSpec.arguments = launchSpec.arguments.collect {
+                    it.startsWith('-Dfabric.dli.config=') ? "-Dfabric.dli.config=${isolatedConfig.absolutePath}".toString() : it
+                }
+                output.text = groovy.json.JsonOutput.toJson(launchSpec)
+            }
+        }
+    }
+}

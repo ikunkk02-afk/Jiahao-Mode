@@ -123,10 +123,20 @@ public final class JiahaoTransformationTests implements FabricGameTest {
 		context.assertTrue(players.loadPlayerData(reloaded).isPresent() && JiahaoStateManager.isJiahao(reloaded),
 				"Disk player data must restore Jiahao form");
 
-		ServerPlayerEntity respawned = players.respawnPlayer(player, false, Entity.RemovalReason.KILLED);
-		context.assertTrue(JiahaoStateManager.isJiahao(respawned), "Death respawn must preserve form");
+		boolean keptInventory = world.getGameRules().getBoolean(net.minecraft.world.GameRules.KEEP_INVENTORY);
+        world.getGameRules().get(net.minecraft.world.GameRules.KEEP_INVENTORY).set(false, server);
+        ServerPlayerEntity respawned = players.respawnPlayer(player, false, Entity.RemovalReason.KILLED);
+		context.assertTrue(!JiahaoStateManager.isJiahao(respawned), "Death without armor must clear form");
+        context.assertTrue(!respawned.writeNbt(new NbtCompound()).getCompound("fabric:attachments").getBoolean("jiahao-mode:jiahao_state"), "Invalid copied flag is cleared");
 		context.assertTrue(!weather.isRaining(), "Respawn must not restart rain");
-		ServerWorld nether = server.getWorld(World.NETHER);
+		equipJiahaoArmor(respawned);
+        JiahaoStateManager.setJiahao(respawned, true);
+        world.setWeather(0, 3456, false, false);
+        world.getGameRules().get(net.minecraft.world.GameRules.KEEP_INVENTORY).set(true, server);
+        respawned = players.respawnPlayer(respawned, false, Entity.RemovalReason.KILLED);
+        context.assertTrue(JiahaoStateManager.isJiahao(respawned), "Keep-inventory death preserves full-set form");
+        world.getGameRules().get(net.minecraft.world.GameRules.KEEP_INVENTORY).set(keptInventory, server);
+        ServerWorld nether = server.getWorld(World.NETHER);
 		respawned.teleportTo(new TeleportTarget(nether, new Vec3d(0, 80, 0), Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
 		context.assertTrue(JiahaoStateManager.isJiahao(respawned), "Changing dimensions must preserve form");
 		JiahaoStateManager.setJiahao(respawned, false);
@@ -154,6 +164,13 @@ public final class JiahaoTransformationTests implements FabricGameTest {
 		context.complete();
 	}
 
+	static void equipJiahaoArmor(ServerPlayerEntity player) {
+        player.equipStack(net.minecraft.entity.EquipmentSlot.HEAD, new ItemStack(ModItems.JIAHAO_HELMET));
+        player.equipStack(net.minecraft.entity.EquipmentSlot.CHEST, new ItemStack(ModItems.JIAHAO_CHESTPLATE));
+        player.equipStack(net.minecraft.entity.EquipmentSlot.LEGS, new ItemStack(ModItems.JIAHAO_LEGGINGS));
+        player.equipStack(net.minecraft.entity.EquipmentSlot.FEET, new ItemStack(ModItems.JIAHAO_BOOTS));
+    }
+
 	private static long lightningCount(ServerWorld world) {
 		return StreamSupport.stream(world.iterateEntities().spliterator(), false)
 				.filter(LightningEntity.class::isInstance).count();
@@ -166,6 +183,7 @@ public final class JiahaoTransformationTests implements FabricGameTest {
 		EmbeddedChannel channel = new EmbeddedChannel(connection);
 		server.getPlayerManager().onPlayerConnect(connection, player, data);
 		player.changeGameMode(GameMode.CREATIVE);
+		equipJiahaoArmor(player);
 		return new TestPlayerConnection(player, channel);
 	}
 

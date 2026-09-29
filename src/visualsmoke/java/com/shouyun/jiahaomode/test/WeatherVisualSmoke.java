@@ -102,7 +102,7 @@ public final class WeatherVisualSmoke implements ClientModInitializer {
 		BlockPos position = client.player.getBlockPos();
 		server.execute(() -> {
 			var player = server.getPlayerManager().getPlayer(uuid); var world = player.getServerWorld();
-			JiahaoStateManager.setJiahao(player, true); world.setTimeOfDay(12000); world.setWeather(0, 10000, true, false);
+			equipArmor(player); JiahaoStateManager.setJiahao(player, true); world.setTimeOfDay(12000); world.setWeather(0, 10000, true, false);
 			String biome = snow ? "snowy_plains" : "plains";
 			String command = "fillbiome " + (position.getX() - 12) + " " + (position.getY() - 16) + " " + (position.getZ() - 12) + " " + (position.getX() + 12) + " " + (position.getY() + 16) + " " + (position.getZ() + 12) + " minecraft:" + biome;
 			server.getCommandManager().executeWithPrefix(player.getCommandSource().withLevel(4), command);
@@ -117,4 +117,11 @@ public final class WeatherVisualSmoke implements ClientModInitializer {
 		@Override public void buildGeometry(VertexConsumer vertices, Camera camera, float delta) { frames++; lastDelta = delta; }
 		@Override public ParticleTextureSheet getType() { return ParticleTextureSheet.PARTICLE_SHEET_TRANSLUCENT; }
 	}
+
+ private static void equipArmor(net.minecraft.server.network.ServerPlayerEntity p) {
+  p.equipStack(net.minecraft.entity.EquipmentSlot.HEAD,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_HELMET));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_CHESTPLATE));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.LEGS,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_LEGGINGS));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.FEET,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_BOOTS));
+ }
 }

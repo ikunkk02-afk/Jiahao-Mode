@@ -187,7 +187,7 @@ public final class CinematicSmoke implements ClientModInitializer {
             p.teleportTo(new TeleportTarget(world, new Vec3d(.5,180,.5), Vec3d.ZERO, 0,0,TeleportTarget.NO_OP));
             server.getCommandManager().executeWithPrefix(p.getCommandSource().withLevel(4), "fillbiome -8 179 -8 8 185 8 minecraft:plains");
             p.getAbilities().flying = false; p.sendAbilitiesUpdate();
-            JiahaoStateManager.setJiahao(p,true); world.setWeather(0,12000,true,false); world.setTimeOfDay(12000);
+            equipArmor(p); JiahaoStateManager.setJiahao(p,true); world.setWeather(0,12000,true,false); world.setTimeOfDay(12000);
         });
     }
     private void testModelAndObserver(MinecraftClient client) {
@@ -224,4 +224,11 @@ public final class CinematicSmoke implements ClientModInitializer {
     }
     private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void near(double actual,double expected,double epsilon,String message) { check(Math.abs(actual-expected)<=epsilon,message+": "+actual+" != "+expected); }
+
+ private static void equipArmor(net.minecraft.server.network.ServerPlayerEntity p) {
+  p.equipStack(net.minecraft.entity.EquipmentSlot.HEAD,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_HELMET));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_CHESTPLATE));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.LEGS,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_LEGGINGS));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.FEET,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_BOOTS));
+ }
 }

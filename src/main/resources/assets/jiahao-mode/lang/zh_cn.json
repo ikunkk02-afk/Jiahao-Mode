@@ -56,5 +56,12 @@
   "jiahao.quote.kill_entity.4": "没有必要浪费时间。",
   "jiahao.quote.idle.1": "有时候，沉默也是一种答案。",
   "jiahao.quote.idle.2": "雨声，比人安静。",
-  "jiahao.quote.idle.3": "我只是在等。"
+  "jiahao.quote.idle.3": "我只是在等。",
+  "item.jiahao-mode.jiahao_helmet": "嘉豪头盔",
+  "item.jiahao-mode.jiahao_chestplate": "嘉豪胸甲",
+  "item.jiahao-mode.jiahao_leggings": "嘉豪护腿",
+  "item.jiahao-mode.jiahao_boots": "嘉豪靴子",
+  "message.jiahao-mode.armor_required": "你必须穿上整套嘉豪盔甲",
+  "jiahao.quote.special.transform_revenge": "10年前的仇难道不报了吗",
+  "jiahao.quote.special.time_stop_notice": "注意时间并没有静止"
 }

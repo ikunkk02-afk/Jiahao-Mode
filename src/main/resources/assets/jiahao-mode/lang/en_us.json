@@ -56,5 +56,12 @@
   "jiahao.quote.kill_entity.4": "No need to waste time.",
   "jiahao.quote.idle.1": "Sometimes silence is an answer.",
   "jiahao.quote.idle.2": "Rain is quieter than people.",
-  "jiahao.quote.idle.3": "I'm just waiting."
+  "jiahao.quote.idle.3": "I'm just waiting.",
+  "item.jiahao-mode.jiahao_helmet": "Jiahao Hood",
+  "item.jiahao-mode.jiahao_chestplate": "Jiahao Chestplate",
+  "item.jiahao-mode.jiahao_leggings": "Jiahao Leggings",
+  "item.jiahao-mode.jiahao_boots": "Jiahao Boots",
+  "message.jiahao-mode.armor_required": "You must wear the full Jiahao Armor set",
+  "jiahao.quote.special.transform_revenge": "Isn’t it time to settle the grudge from ten years ago?",
+  "jiahao.quote.special.time_stop_notice": "Be careful — time has not truly stopped."
 }

@@ -8,7 +8,7 @@ Minecraft 1.21.1 / Fabric；沿用 `com.shouyun.jiahaomode`。本阶段仅文本
 
 - `quote/JiahaoQuote.java`：不可变语录 record。
 - `quote/JiahaoQuoteCategory.java`：类别、优先级及初始条目数。
-- `quote/JiahaoQuoteRegistry.java`：43 条语录定义（第五阶段补充 6 条 PERFECT_DODGE）、按类别检索和不重复选择。
+- `quote/JiahaoQuoteRegistry.java`：43 条随机池语录及第六阶段 2 条指定 ID 固定语录、按类别检索和不重复选择。
 - `quote/JiahaoQuoteManager.java`：服务器权威、预约、冷却、会话与接收者。
 - `quote/JiahaoQuoteTrigger.java`：生命周期、攻击、死亡事件接入。
 - `network/JiahaoQuoteNetworking.java`：频道及服务器接收器注册。
@@ -48,7 +48,18 @@ soundId 预留未来 SoundEvent 的注册 ID；当前所有条目为空，不加
 | KILL_ENTITY | 4 | 20 |
 | IDLE | 3 | 10 |
 
-文本全部在 `assets/jiahao-mode/lang/zh_cn.json`、`en_us.json`，键为 `jiahao.quote.<category>.<number>`。原文按需求收录，不声称是真实人物原话。CINEMATIC 固定“世界，安静一点。”，其他类别随机。未来加类别、条目和事件调用，不需要把文本写进 Item 或 Cinematic。
+文本全部在 `assets/jiahao-mode/lang/zh_cn.json`、`en_us.json`，随机条目键为 `jiahao.quote.<category>.<number>`。
+原文按需求收录，不声称是真实人物原话。旧 CINEMATIC“世界，安静一点。”保留在池中，
+时间暂停现在使用下面的固定 ID。未来加类别、条目和事件调用，不需要把文本写进 Item 或 Cinematic。
+
+| 固定 ID（命名空间 `jiahao-mode`） | 翻译键 | 中文 |
+|---|---|---|
+| `quote/special.transform_revenge` | `jiahao.quote.special.transform_revenge` | 10年前的仇难道不报了吗 |
+| `quote/special.time_stop_notice` | `jiahao.quote.special.time_stop_notice` | 注意时间并没有静止 |
+
+固定条目只进入 ID 索引，不加入类别列表；`emitFixed(serverPlayer, id)` 只接受已注册的这两个 ID。
+复用 `publish`、接收者、事件序号和取消网络，优先级 50、显示 60 Tick。成功的新固定事件可替换
+上一条固定台词，普通语录在显示期间不能覆盖它。没有新增客户端上传 ID 或任意文本的能力。
 
 ## 输入与联机权限
 
@@ -58,19 +69,21 @@ V → 空 C2S → 从连接取得玩家 → 服务器验证存活、嘉豪形态
 
 S2C 含 UUID、维度、Quote ID、递增事件编号和可选演出 session；Quote ID 为空表示取消。只向同维度 64 格内支持频道的玩家发送，包括本人；客户端头顶绘制距离另限 32 格。旧接收者会在说话者状态失效时收到取消，防止离开范围或换维度后残留。
 
-播放失败 C2S 只能引用当前拥有者的当前有效时间暂停 session，且只允许在本轮尚未发句时回退一次。它不能指定类别或语录。当前客户端在摄像机被其他实体占用、无法开始自己的演出时报告失败；服务器选择 TIME_STOP_START。
+播放失败 C2S 只能引用当前拥有者的当前有效时间暂停 session。固定开场在启动时已经发送，
+所以演出中止或播放失败不会再触发第二句。它不能指定类别或语录。
 
 ## 触发与时间线
 
-- 成功变身后延迟 20 个服务器 Tick；解除、死亡、换维度、退出取消。登录/重生只恢复监测，不重播变身。
+- 成功变身立即指定 `TRANSFORM_REVENGE`；旧的 20 Tick 随机预约已移除。解除、脱装备、死亡、换维度、退出取消。登录/重生只恢复监测，不重播变身。
 - 实际伤害至少 2 点、18% 概率；盾挡、护甲、吸收后的变化由伤害 Mixin 读取。致死或非嘉豪不播。
 - 死亡事件的伤害来源归属于嘉豪玩家，且受害者实现 Monster，才有 20% 击杀语录概率。盔甲架、动物、物品、投射物和玩家排除。
 - 生命首次低于 30% 锁存本次阶段，严格超过 50% 才重置。被演出挡住时最多保留一条；脱离低血量区间便丢弃等待项。
 - 连续闲置 600 Tick 后以 10% 概率尝试；每 600 Tick 最多再试一次。位置变化、攻击（含空挥）、伤害、手动说话与时间技能重置计时；冻结旁观者不说闲置语录。
-- 时间暂停成功后使用原有 session。可演出时预约第 74 Tick，取消尚未播出的 TRANSFORM，并阻止普通台词插入。本人客户端等到实际 Timeline 至少 0.74 才开始字幕；其他人显示头顶文字。
-- 无法演出或在发句前中止时回退 TIME_STOP_START；已发 CINEMATIC 则不回退。同一会话只发一次。
+- 时间暂停成功立即指定 `TIME_STOP_NOTICE` 并标记当前会话已发开场。消息中的等待 session 为空，
+  本人立即显示字幕；附近玩家立即显示头顶文字。原有第 74 Tick CINEMATIC 预约已移除。
+- 无法演出、演出中止或播放失败均不补发随机 TIME_STOP_START；同一会话只发一次开场。
 - 正常到时或主动 R 结束触发 TIME_STOP_END；高优先级文本未结束时延后到其结束后 5 Tick。死亡、退出、换维度、解除形态不播结束语录。
-- 第五阶段由服务器 `ALLOW_DAMAGE` 成功消费完美机会后调用 `perfectDodge`。首次符合播放条件必播，随后成功播放至少相隔 80 Tick；不覆盖 CINEMATIC。受冷却或高优先级文本阻挡时不播语录，但音效、粒子、Pose 和本人镜头始终触发。
+- 第五阶段由服务器 `ALLOW_DAMAGE` 成功消费完美机会后调用 `perfectDodge`。首次符合播放条件必播，随后成功播放至少相隔 80 Tick；不覆盖固定台词。受冷却或高优先级文本阻挡时不播语录，但音效、粒子、Pose 和本人镜头始终触发。
 
 ## 冷却、优先级和清理
 
@@ -84,7 +97,7 @@ S2C 含 UUID、维度、Quote ID、递增事件编号和可选演出 session；Q
 
 本人通过 HUD callback 显示白色原版字体、轻黑影、可换行的下方居中字幕，避开快捷栏和电影黑边，不占用 ActionBar。本人不重复显示自己的头顶文字。旁观者只见对应 UUID 的 billboard 文字，半透明黑底，位于名字上方，跟随玩家、面向实际摄像机，遵循深度遮挡。
 
-默认 2.5 秒：0.15 秒淡入，最后 0.25 秒淡出。服务端使用原有独立 server tick；客户端用 `System.nanoTime()` 单调真实时间。冻结 World Time、天气或实体模拟不会冻结文字动画。服务器 Tick 在正常 20 TPS 下对应声明秒数；服务器卡顿时冷却按 Tick 延长。
+默认 2.5 秒，固定台词为 3 秒：0.15 秒淡入，最后 0.25 秒淡出。服务端使用原有独立 server tick；客户端用 `System.nanoTime()` 单调真实时间。冻结 World Time、天气或实体模拟不会冻结文字动画。服务器 Tick 在正常 20 TPS 下对应声明秒数；服务器卡顿时冷却按 Tick 延长。
 
 Text、换行结果缓存，语言或宽度变化才重排。客户端同时校验事件编号、维度和注册 ID；低优先级消息不能覆盖仍有效的高优先级文本。换世界/断线清空，死亡或服务器取消移除对应 UUID。
 

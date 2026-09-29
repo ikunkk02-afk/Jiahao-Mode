@@ -27,12 +27,12 @@ public final class QuoteSmoke implements ClientModInitializer {
    try {
     var c=MinecraftClient.getInstance();var q=JiahaoQuoteClientState.local();
     if(stage==1&&q!=null&&q.started!=0){
-     if(q.quote.category()==JiahaoQuoteCategory.CINEMATIC){
-      check(JiahaoCinematicController.getProgress()>=.74,"Cue not before timeline .74");
+     if(q.quote.id().equals(JiahaoQuoteRegistry.TIME_STOP_NOTICE)){
+      check(q.session==null,"Fixed notice displays without cinematic timeline wait");
       check(JiahaoTimeStopClientState.isTimeStopped(c.world),"Cue displayed in frozen world");
       if(!cueSeen){cueSeen=true;cueStart=q.started;}else check(cueStart==q.started,"Same cinematic starts once");
       if(q.age()>.01&&q.age()<.14&&q.alpha()>0&&q.alpha()<1)fadeIn=true;
-      if(q.age()>2.26&&q.age()<2.49&&q.alpha()>0&&q.alpha()<1)fadeOut=true;
+      if(q.age()>2.76&&q.age()<2.99&&q.alpha()>0&&q.alpha()<1)fadeOut=true;
       if(q.age()>.4)shot(c,"quote-cinematic.png");
      } else if(q.age()>.3)shot(c,"quote-"+q.quote.category().name().toLowerCase()+".png");
     }
@@ -59,14 +59,14 @@ public final class QuoteSmoke implements ClientModInitializer {
    if(stage==1){
     if(ticks==10)ClientPlayNetworking.send(JiahaoQuoteRequestPayload.INSTANCE);
     if(ticks==20){check(JiahaoQuoteClientState.local()==null,"Normal V ignored");form(c,true);}
-    if(ticks==55){var q=JiahaoQuoteClientState.local();check(q!=null&&q.quote.category()==JiahaoQuoteCategory.TRANSFORM,"Delayed transform received");}
+    if(ticks==55){var q=JiahaoQuoteClientState.local();check(q!=null&&q.quote.category()==JiahaoQuoteCategory.TRANSFORM,"Fixed transform received");}
     if(ticks==110)ClientPlayNetworking.send(JiahaoQuoteRequestPayload.INSTANCE);
     if(ticks==118){var q=JiahaoQuoteClientState.local();check(q!=null&&q.quote.category()==JiahaoQuoteCategory.MANUAL,"Manual C2S/S2C");manualId=q.quote.id();manualStart=q.started;for(int i=0;i<30;i++)ClientPlayNetworking.send(JiahaoQuoteRequestPayload.INSTANCE);}
     if(ticks==125)check(JiahaoQuoteClientState.local().started==manualStart,"Spam cannot restart subtitle");
     if(ticks==170)ClientPlayNetworking.send(JiahaoQuoteRequestPayload.INSTANCE);
     if(ticks==178)check(!JiahaoQuoteClientState.local().quote.id().equals(manualId),"Manual does not repeat");
     if(ticks==235)ClientPlayNetworking.send(JiahaoTimeTogglePayload.INSTANCE);
-    if(ticks==285)check(JiahaoQuoteClientState.local()==null,"No early start quote in cinematic");
+    if(ticks==245){var q=JiahaoQuoteClientState.local();check(q!=null&&q.quote.id().equals(JiahaoQuoteRegistry.TIME_STOP_NOTICE)&&q.started!=0,"Immediate fixed time notice in cinematic");}
     if(ticks==405){check(cueSeen&&fadeIn&&fadeOut,"Actual cinematic fade in/out sampled");check(!JiahaoTimeStopClientState.isTimeStopped(c.world),"Time resumes");}
     if(ticks==465){check(JiahaoQuoteClientState.local()==null,"End subtitle expires");remote(c);stage=2;ticks=0;}
    }else if(stage==2){
@@ -96,7 +96,7 @@ public final class QuoteSmoke implements ClientModInitializer {
   JiahaoQuoteClientState.receive(new JiahaoQuoteSyncPayload(actor.getUuid(),wrong.getValue(),q.id(),Long.MAX_VALUE,null));
   check(JiahaoQuoteClientState.active().get(actor.getUuid())==original,"Wrong dimension ignored");
  }
- private void form(MinecraftClient c,boolean value){var server=c.getServer();var id=c.player.getUuid();server.execute(()->JiahaoStateManager.setJiahao(server.getPlayerManager().getPlayer(id),value));}
+ private void form(MinecraftClient c,boolean value){var server=c.getServer();var id=c.player.getUuid();server.execute(()->{var p=server.getPlayerManager().getPlayer(id);if(value)equipArmor(p);JiahaoStateManager.setJiahao(p,value);});}
  private void shot(MinecraftClient c,String name){if(shots.add(name))pendingShot=name;}
  public static void capture(){if(pendingShot!=null){var c=MinecraftClient.getInstance();net.minecraft.client.util.ScreenshotRecorder.saveScreenshot(c.runDirectory,pendingShot,c.getFramebuffer(),t->{});pendingShot=null;}}
  private void finish(MinecraftClient c,boolean success){
@@ -105,4 +105,11 @@ public final class QuoteSmoke implements ClientModInitializer {
   try{Files.writeString(Path.of("quote-smoke-result.txt"),success?"PASSED":"FAILED: "+failure);}catch(Exception e){throw new RuntimeException(e);}c.scheduleStop();
  }
  private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
+
+ private static void equipArmor(net.minecraft.server.network.ServerPlayerEntity p) {
+  p.equipStack(net.minecraft.entity.EquipmentSlot.HEAD,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_HELMET));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_CHESTPLATE));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.LEGS,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_LEGGINGS));
+  p.equipStack(net.minecraft.entity.EquipmentSlot.FEET,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_BOOTS));
+ }
 }
