@@ -48,7 +48,7 @@ public final class JiahaoQuoteClientState {
    return;
   }
   ENDING.remove(p.player());boolean local=c.player!=null&&p.player().equals(c.player.getUuid());
-  ACTIVE.put(p.player(),new Active(quote,p.session(),local&&p.session()!=null));
+  ACTIVE.put(p.player(),new Active(quote,p.session(),local&&p.session()!=null&&quote.category()==JiahaoQuoteCategory.CINEMATIC));
  }
  public static void update(){
   var c=MinecraftClient.getInstance();

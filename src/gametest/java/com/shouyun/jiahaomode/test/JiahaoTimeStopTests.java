@@ -187,7 +187,7 @@ public final class JiahaoTimeStopTests implements FabricGameTest {
 				check(waits < 2000, "Scenario server-tick watchdog exceeded");
 				long elapsed = JiahaoTimeStopManager.getServerTick(server) - start;
 				if (stage == 0) {
-					if (elapsed < 160) {
+					if (elapsed < 300) {
 						check(JiahaoTimeStopManager.isTimeStopped(world), "Stop must remain active before deadline");
 						check(world.getTime() == frozenTime && world.getTimeOfDay() == frozenDay, "Dimension game and sky times must be frozen");
 						check(arrow.getPos().equals(arrowPosition) && arrow.getVelocity().equals(arrowVelocity) && arrow.age == age, "Flying arrow must retain position, velocity and age");
@@ -204,7 +204,7 @@ public final class JiahaoTimeStopTests implements FabricGameTest {
 						check(world.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE), "Daylight gamerule must remain unchanged");
 						if (elapsed == 30) {
 							check(owner.age > ownerAge && server.getWorld(World.NETHER).getTime() > netherTime && server.getWorld(World.END).getTime() > endTime, "Owner, Nether and End must continue ticking");
-							check(actor.channel().outboundMessages().stream().anyMatch(packet -> packet instanceof CustomPayloadS2CPacket custom && custom.payload() instanceof JiahaoTimeStatePayload state && state.remainingTicks() == 140), "Remaining time synchronizes every 20 ticks");
+							check(actor.channel().outboundMessages().stream().anyMatch(packet -> packet instanceof CustomPayloadS2CPacket custom && custom.payload() instanceof JiahaoTimeStatePayload state && state.remainingTicks() == 280), "Remaining time synchronizes every 20 ticks");
 							ack(actor); owner.networkHandler.syncWithPlayerPosition();
 							Vec3d before = owner.getPos(); owner.jump();
 							check(owner.getVelocity().y > 0, "Owner can jump");
@@ -220,7 +220,7 @@ public final class JiahaoTimeStopTests implements FabricGameTest {
 						}
 						return false;
 					}
-					check(elapsed == 160 && !JiahaoTimeStopManager.isTimeStopped(world), "Stop ends at exactly 160 server ticks");
+					check(elapsed == 300 && !JiahaoTimeStopManager.isTimeStopped(world), "Stop ends at exactly 300 server ticks");
 					check(hasSnapshot(actor, false) && actor.hasActionBar("message.jiahao-mode.time.ended"), "Automatic end sync and feedback are sent");
 					check(!arrow.getPos().equals(arrowPosition) && arrow.getVelocity().x > 0 && tnt.getFuse() == 19, "Arrow/TNT resume: position=" + arrow.getPos() + ", original=" + arrowPosition + ", velocity=" + arrow.getVelocity() + ", age=" + arrow.age + ", fuse=" + tnt.getFuse());
 					for (Entity entity : entities) check(entity.age > frozenAges.get(entity), "Entity resumes ticking: " + entity.getType());
@@ -234,34 +234,34 @@ public final class JiahaoTimeStopTests implements FabricGameTest {
 					return false;
 				}
 				if (stage == 1) {
-					if (elapsed == 165) check(!world.getBlockState(fluid.east()).isAir(), "Fluid ticks resume");
-					if (elapsed == 178) check(world.getBlockState(lamp).get(Properties.LIT), "Scheduled delay must not catch up immediately");
-					if (elapsed == 180) {
+					if (elapsed == 305) check(!world.getBlockState(fluid.east()).isAir(), "Fluid ticks resume");
+					if (elapsed == 318) check(world.getBlockState(lamp).get(Properties.LIT), "Scheduled delay must not catch up immediately");
+					if (elapsed == 320) {
 						check(!world.getBlockState(lamp).get(Properties.LIT), "Scheduled block tick resumes after its remaining delay");
 						check(tnt.isRemoved(), "TNT explodes only after its remaining 20 ticks");
 					}
-					if (elapsed == 219) check(!JiahaoTimeStopManager.startTimeStop(owner), "59 cooldown ticks still block start");
-					if (elapsed < 220) return false;
-					check(JiahaoTimeStopManager.startTimeStop(owner), "60 cooldown ticks allow start");
+					if (elapsed == 459) check(!JiahaoTimeStopManager.startTimeStop(owner), "159 cooldown ticks still block start");
+					if (elapsed < 460) return false;
+					check(JiahaoTimeStopManager.startTimeStop(owner), "160 cooldown ticks allow start");
 					request(owner); check(!JiahaoTimeStopManager.isTimeStopped(world), "Second R ends early");
 					stage = 2; start = JiahaoTimeStopManager.getServerTick(server);
 					return false;
 				}
-				if (stage == 2 && elapsed >= 60) {
+				if (stage == 2 && elapsed >= 160) {
 					check(JiahaoTimeStopManager.startTimeStop(owner), "Start for form cancellation");
 					JiahaoStateManager.setJiahao(owner, false);
 					check(!JiahaoTimeStopManager.isTimeStopped(world), "Leaving form immediately restores world");
 					JiahaoStateManager.setJiahao(owner, true);
 					stage = 3; start = JiahaoTimeStopManager.getServerTick(server); return false;
 				}
-				if (stage == 3 && elapsed >= 60) {
+				if (stage == 3 && elapsed >= 160) {
 					check(JiahaoTimeStopManager.startTimeStop(owner), "Start for dimension transition");
 					owner.teleportTo(new TeleportTarget(server.getWorld(World.NETHER), new Vec3d(2, 90, 2), Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
 					check(!JiahaoTimeStopManager.isTimeStopped(world), "Changing dimension releases origin immediately");
 					owner.teleportTo(new TeleportTarget(world, pos(4, 3, 4).toCenterPos(), Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP)); ack(actor);
 					stage = 4; start = JiahaoTimeStopManager.getServerTick(server); return false;
 				}
-				if (stage == 4 && elapsed >= 60) {
+				if (stage == 4 && elapsed >= 160) {
 					check(JiahaoTimeStopManager.startTimeStop(owner), "Start for death");
 					owner.setHealth(0); owner.onDeath(world.getDamageSources().generic());
 					check(!JiahaoTimeStopManager.isTimeStopped(world), "Actual owner death releases world");

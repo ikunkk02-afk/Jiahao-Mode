@@ -46,7 +46,7 @@ public final class QuoteSmoke implements ClientModInitializer {
    check(++total<1800,"Watchdog");if(c.isPaused()||c.getOverlay()!=null)return;ticks++;
    if(stage==0){
     if(c.player==null||c.world==null||c.getServer()==null||ticks<60)return;
-    c.setScreen(null);c.options.pauseOnLostFocus=false;c.options.getMaxFps().setValue(120);c.options.language="zh_cn";
+    ClientPlayNetworking.send(new JiahaoMomentPreferencePayload(false));c.setScreen(null);c.options.pauseOnLostFocus=false;c.options.getMaxFps().setValue(120);c.options.language="zh_cn";
     check(JiahaoQuoteClientState.opacity(0,2.5)==0&&JiahaoQuoteClientState.opacity(.15,2.5)==1&&JiahaoQuoteClientState.opacity(2.5,2.5)==0,"Fade endpoints");
     check(JiahaoSpeechBubbleRenderer.inRange(1024)&&!JiahaoSpeechBubbleRenderer.inRange(1024.1),"Bubble distance boundary");
     c.getServer().execute(()->{
@@ -67,8 +67,8 @@ public final class QuoteSmoke implements ClientModInitializer {
     if(ticks==178)check(!JiahaoQuoteClientState.local().quote.id().equals(manualId),"Manual does not repeat");
     if(ticks==235)ClientPlayNetworking.send(JiahaoTimeTogglePayload.INSTANCE);
     if(ticks==245){var q=JiahaoQuoteClientState.local();check(q!=null&&q.quote.id().equals(JiahaoQuoteRegistry.TIME_STOP_NOTICE)&&q.started!=0,"Immediate fixed time notice in cinematic");}
-    if(ticks==405){check(cueSeen&&fadeIn&&fadeOut,"Actual cinematic fade in/out sampled");check(!JiahaoTimeStopClientState.isTimeStopped(c.world),"Time resumes");}
-    if(ticks==465){check(JiahaoQuoteClientState.local()==null,"End subtitle expires");remote(c);stage=2;ticks=0;}
+    if(ticks==545){check(cueSeen&&fadeIn&&fadeOut,"Actual cinematic fade in/out sampled");check(!JiahaoTimeStopClientState.isTimeStopped(c.world),"Time resumes");}
+    if(ticks==605){check(JiahaoQuoteClientState.local()==null,"End subtitle expires");remote(c);stage=2;ticks=0;}
    }else if(stage==2){
     check(JiahaoQuoteClientState.local()==null,"Other speaker never creates local subtitle");
     if(ticks==60){check(JiahaoQuoteClientState.active().isEmpty(),"Bubble expires on real clock");JiahaoQuoteClientState.clear();form(c,false);stage=3;ticks=0;}

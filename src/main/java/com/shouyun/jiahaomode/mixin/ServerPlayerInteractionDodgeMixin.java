@@ -17,6 +17,7 @@ public abstract class ServerPlayerInteractionDodgeMixin implements JiahaoDodgeIn
     @Shadow private boolean failedToMine;
     @Shadow private BlockPos miningPos;
     @Shadow private BlockPos failedMiningPos;
+    public boolean jiahao$isMining() { return mining || failedToMine; }
     public void jiahao$cancelMining() {
         if (mining) world.setBlockBreakingInfo(player.getId(), miningPos, -1);
         if (failedToMine) world.setBlockBreakingInfo(player.getId(), failedMiningPos, -1);

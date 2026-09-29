@@ -4,6 +4,7 @@ package com.shouyun.jiahaomode.client.mixin;
 import com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicCamera;
 import com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -24,7 +25,14 @@ public abstract class CameraCinematicMixin {
             return;
         }
         var frame = JiahaoCinematicCamera.sample((Camera) (Object) this);
-        thirdPerson = true;
+        var client=MinecraftClient.getInstance();
+        // A first-person camera begins inside the actor's head. Hide the actor until
+        // the camera clears the body, including when a wall forces a close orbit.
+        if(!thirdPerson&&client.player!=null){
+            var eye=client.player.getLerpedPos(((Camera)(Object)this).getLastTickDelta())
+                    .add(0,client.player.getStandingEyeHeight(),0);
+            thirdPerson=frame.position().squaredDistanceTo(eye)>1.6*1.6;
+        }
         setPos(frame.position()); setRotation(frame.yaw(), frame.pitch());
     }
 }

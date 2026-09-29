@@ -30,6 +30,6 @@ public abstract class PlayerRenderCinematicMixin {
     @ModifyVariable(method = "setupTransforms", at = @At("HEAD"), argsOnly = true, ordinal = 1)
     private float jiahao$stableBodyYaw(float vanilla, @Local(argsOnly = true) LivingEntity entity) {
         return entity instanceof PlayerEntity player && JiahaoCinematicController.isPoseActive(player)
-                ? JiahaoCinematicController.yaw() : vanilla;
+                ? JiahaoCinematicController.yaw(player) : vanilla;
     }
 }

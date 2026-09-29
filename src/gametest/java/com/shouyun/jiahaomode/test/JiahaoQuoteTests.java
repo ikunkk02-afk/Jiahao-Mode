@@ -99,8 +99,21 @@ public final class JiahaoQuoteTests implements FabricGameTest {
      check(p.getHealth()==19&&count(TAKE_DAMAGE)==1,"Actual armor-bypassing generic damage excludes small hits: health="+p.getHealth()+", count="+count(TAKE_DAMAGE));p.changeGameMode(net.minecraft.world.GameMode.CREATIVE);p.setHealth(20);
     }
     if(t==1010)JiahaoQuoteManager.activity(p);
-    if(t==1609){check(count(IDLE)==0,"Idle cannot fire before 30 seconds");seed(p,true);}
-    if(t==1611){check(count(IDLE)==1,"Idle probability success at 30 second boundary");finish();context.runAtTick(context.getTick()+1,context::complete);return true;}
+    if(t==1020){
+     check(net.minecraft.registry.Registries.ITEM.get(com.shouyun.jiahaomode.JiahaoMode.id("market_viewer"))==com.shouyun.jiahaomode.item.ModItems.MARKET_VIEWER,"Market registered /give ID");
+     check(net.minecraft.registry.Registries.ITEM.get(com.shouyun.jiahaomode.JiahaoMode.id("jiahao_code_editor"))==com.shouyun.jiahaomode.item.ModItems.JIAHAO_CODE_EDITOR,"Code registered /give ID");
+     check(com.shouyun.jiahaomode.item.ModItems.MARKET_VIEWER.getMaxCount()==1&&com.shouyun.jiahaomode.item.ModItems.JIAHAO_CODE_EDITOR.getMaxCount()==1,"Single gadgets");
+     check(server.getRecipeManager().get(com.shouyun.jiahaomode.JiahaoMode.id("market_viewer")).isPresent()&&server.getRecipeManager().get(com.shouyun.jiahaomode.JiahaoMode.id("jiahao_code_editor")).isPresent(),"Test recipes loaded");
+     check(!JiahaoQuoteManager.gadget(p,JiahaoGadgetQuoteRequestPayload.Kind.MARKET),"Missing held item rejected");
+     p.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.MARKET_VIEWER));
+     check(JiahaoQuoteManager.gadget(p,JiahaoGadgetQuoteRequestPayload.Kind.MARKET),"Held market permits quote");
+     check(!JiahaoQuoteManager.gadget(p,JiahaoGadgetQuoteRequestPayload.Kind.MARKET),"Gadget spam rejected");
+     check(!JiahaoQuoteManager.gadget(p,JiahaoGadgetQuoteRequestPayload.Kind.CODE),"Wrong gadget rejected");
+    }
+    if(t==1100){p.setStackInHand(net.minecraft.util.Hand.OFF_HAND,new net.minecraft.item.ItemStack(com.shouyun.jiahaomode.item.ModItems.JIAHAO_CODE_EDITOR));check(JiahaoQuoteManager.gadget(p,JiahaoGadgetQuoteRequestPayload.Kind.CODE),"Offhand code permits quote");check(count(MARKET)==1&&count(CODE)==1,"Server-selected gadget categories");}
+    if(t==1180){JiahaoStateManager.setJiahao(p,false);check(!JiahaoQuoteManager.gadget(p,JiahaoGadgetQuoteRequestPayload.Kind.CODE),"Normal form cannot request gadget quotes");JiahaoStateManager.setJiahao(p,true);}
+    if(t==1779){check(count(IDLE)==0,"Idle cannot fire before 30 seconds");seed(p,true);}
+    if(t==1781){check(count(IDLE)==1,"Idle probability success at 30 second boundary");finish();context.runAtTick(context.getTick()+1,context::complete);return true;}
    }catch(Throwable error){finish();context.runAtTick(context.getTick()+1,()->context.throwGameTestException(error.toString()));return true;}
    return false;
   }

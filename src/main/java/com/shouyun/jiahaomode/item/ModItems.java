@@ -11,6 +11,8 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 
 public final class ModItems {
+	public static final Item MARKET_VIEWER = Registry.register(Registries.ITEM, JiahaoMode.id("market_viewer"), new JiahaoGadgetItem());
+	public static final Item JIAHAO_CODE_EDITOR = Registry.register(Registries.ITEM, JiahaoMode.id("jiahao_code_editor"), new JiahaoGadgetItem());
 	public static final Item JIAHAO_HELMET = armor("jiahao_helmet", ArmorItem.Type.HELMET);
 	public static final Item JIAHAO_CHESTPLATE = armor("jiahao_chestplate", ArmorItem.Type.CHESTPLATE);
 	public static final Item JIAHAO_LEGGINGS = armor("jiahao_leggings", ArmorItem.Type.LEGGINGS);
@@ -35,6 +37,6 @@ public final class ModItems {
 			entries.add(JIAHAO_LEGGINGS); entries.add(JIAHAO_BOOTS);
 		});
 		ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS)
-				.register(entries -> entries.add(JIAHAO_TRANSFORMER));
+				.register(entries -> { entries.add(JIAHAO_TRANSFORMER); entries.add(MARKET_VIEWER); entries.add(JIAHAO_CODE_EDITOR); });
 	}
 }

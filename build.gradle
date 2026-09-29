@@ -71,8 +71,8 @@ java {
 // Client animation math tests are isolated from the distributable and the server GameTests.
 sourceSets {
 	visualtest {
-		compileClasspath += sourceSets.client.output
-		runtimeClasspath += sourceSets.client.output
+		compileClasspath += sourceSets.client.output + sourceSets.main.output
+		runtimeClasspath += sourceSets.client.output + sourceSets.main.output
 	}
 }
 tasks.register('runVisualClockTests', JavaExec) {
@@ -87,6 +87,18 @@ tasks.register('runCinematicTests', JavaExec) {
 	mainClass = 'com.shouyun.jiahaomode.test.CinematicTimelineTests'
 }
 tasks.named('check') { dependsOn tasks.named('runCinematicTests') }
+tasks.register('runPoseTests', JavaExec) {
+	dependsOn tasks.named('visualtestClasses')
+	classpath = sourceSets.visualtest.runtimeClasspath
+	mainClass = 'com.shouyun.jiahaomode.test.PoseDefinitionTests'
+}
+tasks.named('check') { dependsOn tasks.named('runPoseTests') }
+tasks.register('runGadgetTests', JavaExec) {
+	dependsOn tasks.named('visualtestClasses')
+	classpath = sourceSets.visualtest.runtimeClasspath
+	mainClass = 'com.shouyun.jiahaomode.test.GadgetModelTests'
+}
+tasks.named('check') { dependsOn tasks.named('runGadgetTests') }
 
 jar {
 	def projectName = project.name

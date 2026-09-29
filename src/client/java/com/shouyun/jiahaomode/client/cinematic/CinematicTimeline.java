@@ -4,6 +4,9 @@ package com.shouyun.jiahaomode.client.cinematic;
 /** Pure timing/math: independent of world time and weather's FrozenRenderClock. */
 public final class CinematicTimeline {
     public static final double DURATION = 100;
+    private final double duration;
+    public CinematicTimeline() { this(DURATION); }
+    public CinematicTimeline(double duration) { this.duration=duration; }
     private double tick, correctionTarget, lastSample;
     private int authoritative;
     public void start(int elapsed) { tick = lastSample = correctionTarget = authoritative = Math.max(0, elapsed); }
@@ -15,7 +18,7 @@ public final class CinematicTimeline {
         tick = Math.min(authoritative + 20, tick + 1 + Math.min(1, Math.max(0, correctionTarget - tick) * 0.2));
     }
     public double sample(float delta) {
-        lastSample = Math.max(lastSample, Math.min(DURATION, Math.min(authoritative + 20, tick + clamp(delta))));
+        lastSample = Math.max(lastSample, Math.min(duration, Math.min(authoritative + 20, tick + clamp(delta))));
         return lastSample;
     }
     public static double clamp(double value) { return Math.max(0, Math.min(1, value)); }

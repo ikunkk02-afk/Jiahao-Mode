@@ -111,7 +111,7 @@ public final class JiahaoArmorTests implements FabricGameTest {
         } finally {p.getServer().getPlayerManager().remove(p);connection.channel().finishAndReleaseAll();}
     }
 
-    @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_armor_cleanup",tickLimit=500)
+    @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_armor_cleanup",tickLimit=900)
     public void everySlotClearsTimeStopDodgeAndQuotes(TestContext c) { RUNNING.add(new Cleanup(c)); }
 
     @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_armor_saved")
@@ -161,7 +161,7 @@ public final class JiahaoArmorTests implements FabricGameTest {
             start=JiahaoTimeStopManager.getServerTick(p.getServer());
         }
         boolean tick() {
-            long age=JiahaoTimeStopManager.getServerTick(p.getServer())-start;int cycle=(int)(age/100),step=(int)(age%100);
+            long age=JiahaoTimeStopManager.getServerTick(p.getServer())-start;int cycle=(int)(age/200),step=(int)(age%200);
             try {
                 if(cycle>=4){finish();c.runAtTick(c.getTick()+1,c::complete);return true;}
                 if(step==1) {

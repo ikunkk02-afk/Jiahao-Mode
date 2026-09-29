@@ -1,7 +1,1 @@
-{
-  "_comment": "Temporary placeholder: vanilla echo shard. Replace layer0 with jiahao-mode:item/jiahao_transformer when the final PNG is available.",
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "minecraft:item/echo_shard"
-  }
-}
+{"parent":"minecraft:item/generated","textures":{"layer0":"jiahao-mode:item/jiahao_transformer"}}

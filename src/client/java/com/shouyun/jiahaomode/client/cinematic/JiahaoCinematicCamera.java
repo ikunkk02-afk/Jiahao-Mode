@@ -18,9 +18,9 @@ public final class JiahaoCinematicCamera {
         double facing = Math.toRadians(JiahaoCinematicController.yaw());
         Vec3d front = new Vec3d(-Math.sin(facing), 0, Math.cos(facing));
         Vec3d right = new Vec3d(-Math.cos(facing), 0, -Math.sin(facing));
-        double angle = Math.toRadians(CinematicTimeline.angle(ticks)), radius = CinematicTimeline.radius(ticks);
+        double angle = Math.toRadians(JiahaoCinematicController.orbitAngle(ticks)), radius = JiahaoCinematicController.orbitRadius(ticks);
         return JiahaoCinematicController.origin().add(front.multiply(radius * Math.cos(angle)))
-                .add(right.multiply(radius * Math.sin(angle))).add(0, CinematicTimeline.height(ticks), 0);
+                .add(right.multiply(radius * Math.sin(angle))).add(0, JiahaoCinematicController.orbitHeight(ticks), 0);
     }
     public static Frame sample(Camera vanilla) {
         Frame normal = new Frame(vanilla.getPos(), vanilla.getYaw(), vanilla.getPitch());

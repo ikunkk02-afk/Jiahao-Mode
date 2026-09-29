@@ -11,6 +11,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(MinecraftClient.class)
 public abstract class ClientActionsCinematicMixin {
+    @Inject(method = "setScreen", at = @At("HEAD"))
+    private void jiahao$cancelMomentForGui(net.minecraft.client.gui.screen.Screen screen, CallbackInfo ci) {
+        if(screen!=null)com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController.onScreenOpened();
+    }
     @Inject(method = "handleInputEvents", at = @At("HEAD"))
     private void jiahao$drainInput(CallbackInfo ci) { JiahaoCinematicInput.update((MinecraftClient) (Object) this); }
     @Inject(method = "doAttack", at = @At("HEAD"), cancellable = true)

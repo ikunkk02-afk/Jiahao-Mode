@@ -1,117 +1,191 @@
 // SPDX-License-Identifier: MIT
 package com.shouyun.jiahaomode.client.cinematic;
 
-import com.shouyun.jiahaomode.network.JiahaoTimeStatePayload;
+import com.shouyun.jiahaomode.cinematic.*;
+import com.shouyun.jiahaomode.client.*;
+import com.shouyun.jiahaomode.moment.JiahaoMomentView;
+import com.shouyun.jiahaomode.network.*;
 import com.shouyun.jiahaomode.timestop.JiahaoTimeView;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;
-import java.util.UUID;
+import java.util.*;
 
-/** One dimension-local session. Only its owner gets camera/input overrides. */
+/** Per-actor poses; a single local camera owner with explicit priority. */
 public final class JiahaoCinematicController {
-    private static final CinematicTimeline TIMELINE = new CinematicTimeline();
+    private static final Map<UUID,Session> ACTORS=new HashMap<>();
+    private static final Map<UUID,Boolean> ENDED=new LinkedHashMap<>();
     private static ClientWorld world;
-    private static UUID session, owner, failedSession;
-    private static Vec3d origin = Vec3d.ZERO;
-    private static float yaw;
-    private static boolean playing, returning;
-    private static double elapsed, returnStart, returnWeight, returnBars, rawFrame;
+    private static Session time,camera;
+    private static boolean returning;
+    private static double returnStart,returnWeight,returnBars,rawFrame;
     private static long clientTicks;
-    private JiahaoCinematicController() { }
+    private static final class Session {
+        final UUID id,owner;
+        final CinematicType type;
+        final JiahaoPoseType pose;
+        final Vec3d origin;
+        final float yaw;
+        final int arc;
+        final CinematicTimeline timeline;
+        double elapsed;
+        boolean playing=true;
+        Session(UUID id,UUID owner,CinematicType type,JiahaoPoseType pose,Vec3d origin,float yaw,int arc,int elapsed) {
+            this.id=id;this.owner=owner;this.type=type;this.pose=pose;this.origin=origin;this.yaw=yaw;this.arc=arc;
+            timeline=new CinematicTimeline(type.duration);timeline.start(elapsed);this.elapsed=elapsed;playing=elapsed<type.duration;
+        }
+    }
+    private JiahaoCinematicController() {}
     public static void initialize() {
-        ClientTickEvents.START_CLIENT_TICK.register(client -> {
-            validate(client);
-            JiahaoCinematicInput.update(client);
-            if (!client.isPaused()) {
-                clientTicks++;
-                if (playing) TIMELINE.tick();
-            }
+        ClientTickEvents.START_CLIENT_TICK.register(client->{
+            validate(client);JiahaoCinematicInput.update(client);
+            if(!client.isPaused()){clientTicks++;for(var s:ACTORS.values())if(s.playing)s.timeline.tick();}
             publishMovementLock();
         });
     }
-    public static void onStateSync(ClientWorld next, JiahaoTimeStatePayload state) {
-        if (world != next) { cleanup(); world = next; }
-        if (!state.active() || !state.cinematic()) { stop(false); return; }
-        if (!state.session().equals(session)) {
-            stop(true);
-            session = state.session(); owner = state.owner(); origin = state.origin(); yaw = state.yaw();
-            elapsed = state.elapsedTicks();
-            TIMELINE.start(state.elapsedTicks());
-            playing = state.elapsedTicks() < 100;
-            JiahaoCinematicCamera.reset();
-            if (locksInput()) {
-                var player = MinecraftClient.getInstance().player;
-                player.setVelocity(Vec3d.ZERO); player.stopUsingItem(); player.setSprinting(false);
-            }
-        } else TIMELINE.sync(state.elapsedTicks());
-        if (isLocalOwner() && playing && MinecraftClient.getInstance().getCameraEntity() != MinecraftClient.getInstance().player
-                && !session.equals(failedSession)) {
-            failedSession = session;
-            if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(com.shouyun.jiahaomode.network.JiahaoQuotePlaybackFailedPayload.ID))
-                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new com.shouyun.jiahaomode.network.JiahaoQuotePlaybackFailedPayload(session));
-            stop(true);
+    private static boolean local(Session s) {
+        var p=MinecraftClient.getInstance().player;return s!=null&&p!=null&&p.getWorld()==world&&p.getUuid().equals(s.owner);
+    }
+    private static void useWorld(ClientWorld next) {if(world!=next){cleanup();world=next;}}
+    private static void start(Session s) {
+        ACTORS.put(s.owner,s);
+        if(local(s)&&s.playing) {
+            if(camera!=null&&(camera.playing||returning)&&camera.type.priority>s.type.priority){s.playing=false;return;}
+            camera=s;returning=false;JiahaoCinematicCamera.reset();JiahaoDodgeClientController.suppressCamera();
+            var p=MinecraftClient.getInstance().player;p.setVelocity(Vec3d.ZERO);p.stopUsingItem();p.setSprinting(false);
+        }
+    }
+    public static void onStateSync(ClientWorld next,JiahaoTimeStatePayload state) {
+        useWorld(next);
+        if(!state.active()||!state.cinematic()) {if(time!=null)finish(time,false);time=null;publishMovementLock();return;}
+        if(time==null||!state.session().equals(time.id)) {
+            if(time!=null)finish(time,true);
+            if(ENDED.containsKey(state.session()))return;
+            time=new Session(state.session(),state.owner(),CinematicType.TIME_STOP,state.pose(),state.origin(),state.yaw(),0,state.elapsedTicks());
+            for(var s:new ArrayList<>(ACTORS.values()))if(s.type==CinematicType.RANDOM_HAO_MOMENT)finish(s,true);
+            start(time);
+        } else time.timeline.sync(state.elapsedTicks());
+        if(local(time)&&time.playing&&MinecraftClient.getInstance().getCameraEntity()!=MinecraftClient.getInstance().player) {
+            if(ClientPlayNetworking.canSend(JiahaoQuotePlaybackFailedPayload.ID))ClientPlayNetworking.send(new JiahaoQuotePlaybackFailedPayload(time.id));
+            finish(time,true);
         }
         publishMovementLock();
     }
+    public static void onMomentSync(JiahaoMomentStatePayload p) {
+        var client=MinecraftClient.getInstance();useWorld(client.world);
+        if(world==null||!world.getRegistryKey().getValue().equals(p.dimension()))return;
+        var old=ACTORS.get(p.player());
+        if(!p.active()) {if(old!=null&&old.id.equals(p.session()))finish(old,true);remember(p.session());publishMovementLock();return;}
+        if(p.elapsed()<0||p.elapsed()>=60||ENDED.containsKey(p.session())||p.arc()!=90&&p.arc()!=120&&p.arc()!=180)return;
+        if(old!=null&&old.type.priority>CinematicType.RANDOM_HAO_MOMENT.priority)return;
+        if(old!=null&&old.id.equals(p.session()))old.timeline.sync(p.elapsed());
+        else {
+            var s=new Session(p.session(),p.player(),CinematicType.RANDOM_HAO_MOMENT,p.pose(),p.origin(),p.yaw(),p.arc(),p.elapsed());
+            if(local(s)&&(!JiahaoClientConfig.enableRandomJiahaoMoments||client.currentScreen!=null||client.getCameraEntity()!=client.player
+                    ||isCameraActive()||JiahaoDodgeClientController.locksMovement())){decline(s);return;}
+            if(old!=null)finish(old,true);start(s);
+        }
+        publishMovementLock();
+    }
+    private static void decline(Session s) {
+        remember(s.id);
+        if(ClientPlayNetworking.canSend(JiahaoMomentResponsePayload.ID))ClientPlayNetworking.send(new JiahaoMomentResponsePayload(s.id,false));
+        finish(s,true);
+    }
+    public static void onScreenOpened() {
+        if(camera!=null&&camera.playing&&camera.type==CinematicType.RANDOM_HAO_MOMENT){decline(camera);publishMovementLock();}
+    }
     public static void beginFrame(float delta) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        validate(client);
-        if (!client.isPaused()) rawFrame = Math.max(rawFrame, clientTicks + CinematicTimeline.clamp(delta));
-        if (playing && !client.isPaused()) elapsed = TIMELINE.sample(delta);
-        if (playing && elapsed >= 100) { playing = false; JiahaoCinematicCamera.reset(); }
-        if (returning && rawFrame - returnStart >= 3) { returning = false; JiahaoCinematicCamera.reset(); }
+        var c=MinecraftClient.getInstance();validate(c);
+        if(!c.isPaused())rawFrame=Math.max(rawFrame,clientTicks+CinematicTimeline.clamp(delta));
+        for(var s:ACTORS.values()) {
+            if(s.playing&&!c.isPaused())s.elapsed=s.timeline.sample(delta);
+            if(s.elapsed>=s.type.duration)s.playing=false;
+        }
+        if(camera!=null&&!camera.playing&&!returning)JiahaoCinematicCamera.reset();
+        if(returning&&rawFrame-returnStart>=3){returning=false;JiahaoCinematicCamera.reset();}
         publishMovementLock();
     }
     private static void validate(MinecraftClient client) {
-        if (world != null && (client.world != world || client.player == null || !client.player.isAlive())) { cleanup(); return; }
-        if (world != null && owner != null) {
-            PlayerEntity actor = world.getPlayerByUuid(owner);
-            if (actor != null && (!actor.isAlive() || actor.isRemoved())) stop(true);
+        if(world!=null&&(client.world!=world||client.player==null||!client.player.isAlive())){cleanup();return;}
+        if(world==null)return;
+        if(camera!=null&&camera.playing&&camera.type==CinematicType.RANDOM_HAO_MOMENT
+                &&(client.currentScreen!=null||client.getCameraEntity()!=client.player||!JiahaoClientConfig.enableRandomJiahaoMoments))decline(camera);
+        var iterator=ACTORS.values().iterator();
+        while(iterator.hasNext()) {
+            var s=iterator.next();
+            var p=world.getPlayerByUuid(s.owner);
+            if(p!=null&&(!p.isAlive()||p.isRemoved()||!com.shouyun.jiahaomode.state.JiahaoStateManager.isJiahao(p))) {
+                s.playing=false;p.setAttached(JiahaoMomentView.LOCKED,false);iterator.remove();
+                if(s==camera){returning=false;JiahaoCinematicCamera.reset();}
+            }
         }
     }
-    public static void stop(boolean immediate) {
-        if (!immediate && playing && isLocalOwner() && elapsed < 100) {
-            returnWeight = cameraWeight(); returnBars = barOpacity(); returnStart = rawFrame; returning = true;
-        } else if (immediate) { returning = false; JiahaoCinematicCamera.reset(); }
-        playing = false;
-        publishMovementLock();
+    private static void finish(Session s,boolean immediate) {
+        remember(s.id);
+        if(s==camera) {
+            if(!immediate&&s.playing&&local(s)&&s.elapsed<s.type.duration){returnWeight=cameraWeight();returnBars=barOpacity();returnStart=rawFrame;returning=true;}
+            else if(immediate){returning=false;JiahaoCinematicCamera.reset();}
+        }
+        s.playing=false;ACTORS.remove(s.owner,s);
+        if(world!=null){var p=world.getPlayerByUuid(s.owner);if(p!=null)p.setAttached(JiahaoMomentView.LOCKED,false);}
     }
+    private static void remember(UUID id){ENDED.put(id,true);if(ENDED.size()>256)ENDED.remove(ENDED.keySet().iterator().next());}
+    public static void stop(boolean immediate) {if(camera!=null&&(camera.playing||returning))finish(camera,immediate);else if(time!=null)finish(time,immediate);publishMovementLock();}
     public static void cleanup() {
-        stop(true); world = null; session = owner = failedSession = null; origin = Vec3d.ZERO;
-        elapsed = rawFrame = 0; clientTicks = 0;
-        JiahaoCinematicInput.reset();
+        if(world!=null)for(var p:world.getPlayers())p.setAttached(JiahaoMomentView.LOCKED,false);
+        ACTORS.clear();ENDED.clear();time=camera=null;world=null;returning=false;rawFrame=0;clientTicks=0;
+        JiahaoCinematicCamera.reset();JiahaoCinematicInput.reset();
     }
     private static void publishMovementLock() {
-        if (world == null) return;
-        var view = world.getAttachedOrElse(JiahaoTimeView.CLIENT_VIEW, JiahaoTimeView.INACTIVE);
-        boolean locked = playing && elapsed < 100;
-        if (view.cinematicLocked() != locked)
-            world.setAttached(JiahaoTimeView.CLIENT_VIEW, new JiahaoTimeView(view.active(), view.owner(), view.remainingTicks(), locked));
+        if(world==null)return;
+        var view=world.getAttachedOrElse(JiahaoTimeView.CLIENT_VIEW,JiahaoTimeView.INACTIVE);
+        boolean locked=time!=null&&time.playing&&time.elapsed<100;
+        if(view.cinematicLocked()!=locked)world.setAttached(JiahaoTimeView.CLIENT_VIEW,new JiahaoTimeView(view.active(),view.owner(),view.remainingTicks(),locked));
+        for(var s:ACTORS.values()) {
+            var p=world.getPlayerByUuid(s.owner);if(p==null)continue;
+            boolean moment=s.playing&&s.type==CinematicType.RANDOM_HAO_MOMENT;
+            if(p.getAttachedOrElse(JiahaoMomentView.LOCKED,false)!=moment)p.setAttached(JiahaoMomentView.LOCKED,moment);
+        }
     }
-    public static boolean isLocalOwner() {
-        var player = MinecraftClient.getInstance().player;
-        return player != null && world == player.getWorld() && player.getUuid().equals(owner);
-    }
-    public static boolean locksInput() { return playing && elapsed < 100 && isLocalOwner(); }
-    public static boolean isCameraActive() { return (playing || returning) && isLocalOwner(); }
-    public static boolean isPoseActive(PlayerEntity player) {
-        return playing && elapsed < 100 && player.getWorld() == world && player.getUuid().equals(owner);
-    }
-    public static UUID sessionId() { return session; }
-    public static double elapsedTicks() { return elapsed; }
-    public static double getProgress() { return elapsed / 100; }
-    public static Vec3d origin() { return origin; }
-    public static float yaw() { return yaw; }
-    public static double rawFrame() { return rawFrame; }
-    public static boolean isReturning() { return returning; }
+    private static Session selected() {return camera!=null&&(camera.playing||returning)?camera:time!=null?time:camera;}
+    public static boolean isLocalOwner() {return local(selected());}
+    public static boolean locksInput() {return camera!=null&&camera.playing&&local(camera);}
+    public static boolean isCameraActive() {return camera!=null&&(camera.playing||returning)&&local(camera);}
+    public static boolean canUseCamera(CinematicType type) {return !isCameraActive()||camera.type.priority<=type.priority;}
+    public static CinematicType cameraType() {return isCameraActive()?camera.type:null;}
+    public static boolean isPoseActive(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return p.getWorld()==world&&s!=null&&s.playing;}
+    public static JiahaoPoseType poseType(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?JiahaoPoseType.DEFAULT:s.pose;}
+    public static double poseElapsed(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?0:s.elapsed;}
+    public static double poseDuration(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?100:s.type.duration;}
+    public static float yaw(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?p.bodyYaw:s.yaw;}
+    public static UUID sessionId() {var s=selected();return s==null?null:s.id;}
+    public static double elapsedTicks() {var s=selected();return s==null?0:s.elapsed;}
+    public static double getProgress() {var s=selected();return s==null?0:s.elapsed/s.type.duration;}
+    public static Vec3d origin() {var s=selected();return s==null?Vec3d.ZERO:s.origin;}
+    public static float yaw() {var s=selected();return s==null?0:s.yaw;}
+    public static double rawFrame() {return rawFrame;}
+    public static boolean isReturning() {return returning;}
     public static double cameraWeight() {
-        return returning ? returnWeight * (1 - CinematicTimeline.smooth((rawFrame - returnStart) / 3)) : CinematicTimeline.weight(elapsed);
+        if(camera==null)return 0;
+        if(returning)return returnWeight*(1-CinematicTimeline.smooth((rawFrame-returnStart)/3));
+        double t=camera.elapsed;
+        return camera.type==CinematicType.TIME_STOP?CinematicTimeline.weight(t):CinematicTimeline.smooth((t-6)/6)*(1-CinematicTimeline.smooth((t-56)/4));
     }
     public static double barOpacity() {
-        if (!isCameraActive()) return 0;
-        return returning ? returnBars * (1 - CinematicTimeline.smooth((rawFrame - returnStart) / 3)) : CinematicTimeline.bars(elapsed);
+        if(!isCameraActive())return 0;
+        if(returning)return returnBars*(1-CinematicTimeline.smooth((rawFrame-returnStart)/3));
+        return camera.type==CinematicType.TIME_STOP?CinematicTimeline.bars(camera.elapsed):cameraWeight()*.75;
     }
+    public static double orbitAngle(double ticks) {
+        var s=selected();if(s==null)return 0;
+        if(s.type==CinematicType.TIME_STOP)return CinematicTimeline.angle(ticks)+(s.pose==JiahaoPoseType.RUNNING_LOOK_BACK?135:0);
+        double end=s.pose==JiahaoPoseType.RUNNING_LOOK_BACK?135:s.arc*.5;
+        return CinematicTimeline.lerp(end-s.arc,end,CinematicTimeline.cubic((ticks-12)/40));
+    }
+    public static double orbitRadius(double ticks) {return cameraType()==CinematicType.RANDOM_HAO_MOMENT?CinematicTimeline.lerp(3.3,2.5,CinematicTimeline.smooth((ticks-12)/40)):CinematicTimeline.radius(ticks);}
+    public static double orbitHeight(double ticks) {return cameraType()==CinematicType.RANDOM_HAO_MOMENT?1.5:CinematicTimeline.height(ticks);}
 }

@@ -29,6 +29,7 @@ public final class JiahaoQuoteManager {
   long idleAt,until,endAt=-1;
   int priority; boolean lowLatched,lowPending,cueSent;
   UUID session;
+  UUID displaySession;
   final Set<UUID> recipients=new HashSet<>();
   State(ServerPlayerEntity p,long tick){dimension=p.getWorld().getRegistryKey().getValue();position=p.getPos();idleAt=tick+600;}
  }
@@ -57,6 +58,19 @@ public final class JiahaoQuoteManager {
   State s=runtime(p.getServer()).active.get(p.getUuid());if(s!=null)s.idleAt=now(p)+600;
  }
  public static boolean manual(ServerPlayerEntity p){activity(p);return emit(p,MANUAL,null);}
+ public static boolean gadget(ServerPlayerEntity p,com.shouyun.jiahaomode.network.JiahaoGadgetQuoteRequestPayload.Kind kind){
+  String item=kind==com.shouyun.jiahaomode.network.JiahaoGadgetQuoteRequestPayload.Kind.MARKET?"market_viewer":"jiahao_code_editor";
+  var id=com.shouyun.jiahaomode.JiahaoMode.id(item);
+  boolean held=net.minecraft.registry.Registries.ITEM.getId(p.getMainHandStack().getItem()).equals(id)
+    ||net.minecraft.registry.Registries.ITEM.getId(p.getOffHandStack().getItem()).equals(id);
+  return held&&emit(p,kind==com.shouyun.jiahaomode.network.JiahaoGadgetQuoteRequestPayload.Kind.MARKET?MARKET:CODE,null);
+ }
+ public static boolean canStartMoment(ServerPlayerEntity p){
+  var s=runtime(p.getServer()).active.get(p.getUuid());return valid(p)&&s!=null&&(now(p)>=s.until||s.priority<40);
+ }
+ public static void cancelSession(ServerPlayerEntity p,UUID session){
+  var r=runtime(p.getServer());var s=r.active.get(p.getUuid());if(s!=null&&session.equals(s.displaySession))cancel(p,s,r);
+ }
  public static boolean emit(ServerPlayerEntity p,JiahaoQuoteCategory category,UUID session){
   if(!valid(p))return false;
   Runtime r=runtime(p.getServer());State s=r.active.get(p.getUuid());if(s==null)return false;
@@ -65,7 +79,7 @@ public final class JiahaoQuoteManager {
   if(s.session!=null&&!s.cueSent&&!special)return false;
   if(t<s.until&&(!special||category.priority<=s.priority))return false;
   if(category==MANUAL&&t<h.manualUntil)return false;
-  if(category==PERFECT_DODGE&&(t<h.perfectUntil||JiahaoTimeStopManager.isCinematicLocked(p)))return false;
+  if(category==PERFECT_DODGE&&(t<h.perfectUntil||com.shouyun.jiahaomode.cinematic.JiahaoCinematicLocks.isLocked(p)))return false;
   if(!special&&category!=MANUAL&&t<h.ordinaryUntil)return false;
   var quote=JiahaoQuoteRegistry.select(category,h.last,h.lastCategory.get(category),bound->p.getRandom().nextInt(bound));
   if(category==MANUAL)h.manualUntil=t+50;
@@ -80,7 +94,7 @@ public final class JiahaoQuoteManager {
   return publish(p,s,r,h,JiahaoQuoteRegistry.get(id),null,now(p));
  }
  private static boolean publish(ServerPlayerEntity p,State s,Runtime r,History h,JiahaoQuote quote,UUID session,long t){
-  s.until=t+quote.displayTicks();s.priority=quote.priority();
+  s.until=t+quote.displayTicks();s.priority=quote.priority();s.displaySession=session;
   h.last=quote.id();h.lastCategory.put(quote.category(),quote.id());h.ordinaryUntil=t+60;
   var payload=new JiahaoQuoteSyncPayload(p.getUuid(),s.dimension,quote.id(),++r.sequence,session);
   for(var recipient:p.getServerWorld().getPlayers()) {

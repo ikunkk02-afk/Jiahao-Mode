@@ -58,6 +58,7 @@ public final class JiahaoStateManager {
 
 		player.setAttached(JiahaoState.FORM, enabled);
 		if (!enabled) com.shouyun.jiahaomode.dodge.JiahaoDodgeManager.clear(player, false);
+		if (!enabled) com.shouyun.jiahaomode.moment.JiahaoMomentManager.clear(player, false);
 		if (!enabled) com.shouyun.jiahaomode.timestop.JiahaoTimeStopManager.stopTimeStop(player);
 		JiahaoTransformationEffects.onFormChanged(player, enabled);
 		com.shouyun.jiahaomode.quote.JiahaoQuoteManager.formChanged(player, enabled);

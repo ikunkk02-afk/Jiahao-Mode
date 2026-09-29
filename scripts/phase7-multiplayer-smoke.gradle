@@ -1,0 +1,48 @@
+// Export the configured Loom launch commands for one isolated server and two real clients.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('phase7Smoke')
+        smoke.java.setSrcDirs(['src/phase7smoke/java'])
+        smoke.resources.setSrcDirs(['src/phase7smoke/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-phase7-smoke') { sourceSet smoke }
+        def role = project.findProperty('phase7Role') ?: 'actor'
+        def isolatedDirectory = project.file(role == 'server' ? 'build/run/phase7Dedicated' : "build/run/phase7${role.capitalize()}")
+        loom.runs.server {
+            runDir 'build/run/phase7Dedicated'
+            programArgs 'nogui'
+        }
+        loom.runs.client {
+            runDir "build/run/phase7${role.capitalize()}"
+            programArgs '--username', role == 'observer' ? 'Phase7Observer' : 'Phase7Actor',
+                    '--quickPlayMultiplayer', '127.0.0.1:25579', '--width', '960', '--height', '540'
+        }
+        ['runServer', 'runClient'].each { name ->
+            tasks.named(name) { dependsOn tasks.named('phase7SmokeClasses'); classpath += smoke.output }
+        }
+        tasks.register('exportPhase7Launch') {
+            dependsOn tasks.named('phase7SmokeClasses'), tasks.named('configureLaunch'), tasks.named('generateDLIConfig')
+            def output = project.file("build/verification/phase7-${role}-launch.json")
+            def originalConfig = project.file('.gradle/loom-cache/launch.cfg')
+            def isolatedConfig = project.file("build/verification/phase7-${role}-launch.cfg")
+            def task = tasks.named(role == 'server' ? 'runServer' : 'runClient').get()
+            def launchSpec = [
+                executable: task.javaLauncher.get().executablePath.asFile.absolutePath,
+                directory: isolatedDirectory.absolutePath,
+                arguments: task.allJvmArgs.findAll { !it.startsWith('@') } + ['-classpath', task.classpath.asPath, task.mainClass.get()] +
+                    (role == 'server' ? ['nogui'] : ['--username', role == 'observer' ? 'Phase7Observer' : 'Phase7Actor',
+                        '--quickPlayMultiplayer', '127.0.0.1:25579', '--width', '960', '--height', '540'])
+            ]
+            doLast {
+                output.parentFile.mkdirs()
+                // Other smoke tasks may regenerate Loom's shared config after this export.
+                isolatedConfig.text = originalConfig.text
+                launchSpec.arguments = launchSpec.arguments.collect {
+                    it.startsWith('-Dfabric.dli.config=') ? "-Dfabric.dli.config=${isolatedConfig.absolutePath}".toString() : it
+                }
+                output.text = groovy.json.JsonOutput.toJson(launchSpec)
+            }
+        }
+    }
+}

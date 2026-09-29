@@ -75,7 +75,7 @@ public final class WeatherVisualSmoke implements ClientModInitializer {
 				check(((WorldRendererTimeAccess) client.worldRenderer).jiahao$getRendererTicks() > startRendererTicks + 120, "Real renderer ticks continue");
 				check(immune.ticks > ordinaryTicks + 100, "Immune skill particle keeps moving");
 				check(ordinary.frames > 20 && immune.frames > 20, "Particle render path remains active");
-				check(Math.abs(JiahaoTimeStopClientState.getWorldAnimationTime() - frozenTime) < 2, "Release cannot jump 8 seconds");
+				check(Math.abs(JiahaoTimeStopClientState.getWorldAnimationTime() - frozenTime) < 2, "Release cannot jump 15 seconds");
 				stage = 4; ticks = 0; return;
 			}
 			if (stage == 4 && ticks >= 80) {
@@ -88,7 +88,7 @@ public final class WeatherVisualSmoke implements ClientModInitializer {
 				client.getServer().stop(false);
 				client.disconnect();
 				check(!JiahaoTimeStopClientState.hasAnimationOffset(client.world), "Disconnect clears visual state");
-				JiahaoMode.LOGGER.info("WEATHER VISUAL SMOKE PASSED: real rain/snow biomes, Fancy clouds clock, gradients, sky, particles/immunity, camera/player movement, 8-second resume, disconnect cleanup");
+				JiahaoMode.LOGGER.info("WEATHER VISUAL SMOKE PASSED: real rain/snow biomes, Fancy clouds clock, gradients, sky, particles/immunity, camera/player movement, 15-second resume, disconnect cleanup");
 				client.scheduleStop();
 			}
 		} catch (Throwable failure) {

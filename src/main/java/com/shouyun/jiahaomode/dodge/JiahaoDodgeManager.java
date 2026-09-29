@@ -59,7 +59,7 @@ public final class JiahaoDodgeManager {
         return p.isAlive() && !p.isRemoved() && !p.isSleeping() && !p.hasVehicle() && !p.isSpectator()
                 && !p.getAbilities().flying && !p.isFallFlying() && !p.isSwimming() && !p.isTouchingWater()
                 && !p.isInLava() && !p.isClimbing() && !p.noClip && !p.notInAnyWorld
-                && !JiahaoTimeStopManager.shouldFreeze(p) && !JiahaoTimeStopManager.isCinematicLocked(p)
+                && !JiahaoTimeStopManager.shouldFreeze(p) && !com.shouyun.jiahaomode.cinematic.JiahaoCinematicLocks.isLocked(p)
                 && p.getServerWorld().isSpaceEmpty(p, p.getBoundingBox().contract(1.0E-6))
                 && !((JiahaoDodgeNetworkAccess)p.networkHandler).jiahao$hasPendingTeleport();
     }

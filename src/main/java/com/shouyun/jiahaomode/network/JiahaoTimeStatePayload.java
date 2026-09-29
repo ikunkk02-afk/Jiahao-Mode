@@ -11,7 +11,12 @@ import net.minecraft.util.math.Vec3d;
 
 public record JiahaoTimeStatePayload(Identifier dimension, boolean active, UUID owner,
 		int remainingTicks, long gameTime, long dayTime, UUID session, int elapsedTicks,
-		boolean cinematic, Vec3d origin, float yaw) implements CustomPayload {
+		boolean cinematic, Vec3d origin, float yaw, com.shouyun.jiahaomode.cinematic.JiahaoPoseType pose) implements CustomPayload {
+	public JiahaoTimeStatePayload(Identifier dimension, boolean active, UUID owner, int remainingTicks,
+			long gameTime, long dayTime, UUID session, int elapsedTicks, boolean cinematic, Vec3d origin, float yaw) {
+		this(dimension, active, owner, remainingTicks, gameTime, dayTime, session, elapsedTicks, cinematic, origin, yaw,
+				com.shouyun.jiahaomode.cinematic.JiahaoPoseType.DEFAULT);
+	}
 	public static final Id<JiahaoTimeStatePayload> ID = new Id<>(JiahaoMode.id("time_state"));
 	public static final PacketCodec<RegistryByteBuf, JiahaoTimeStatePayload> CODEC = new PacketCodec<>() {
 		@Override public JiahaoTimeStatePayload decode(RegistryByteBuf buf) {
@@ -19,7 +24,8 @@ public record JiahaoTimeStatePayload(Identifier dimension, boolean active, UUID 
 			boolean active = buf.readBoolean();
 			return new JiahaoTimeStatePayload(dimension, active, active ? buf.readUuid() : null,
 					buf.readVarInt(), buf.readLong(), buf.readLong(), buf.readUuid(), buf.readVarInt(),
-					buf.readBoolean(), new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble()), buf.readFloat());
+					buf.readBoolean(), new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble()), buf.readFloat(),
+					buf.readEnumConstant(com.shouyun.jiahaomode.cinematic.JiahaoPoseType.class));
 		}
 		@Override public void encode(RegistryByteBuf buf, JiahaoTimeStatePayload payload) {
 			buf.writeIdentifier(payload.dimension());
@@ -33,6 +39,7 @@ public record JiahaoTimeStatePayload(Identifier dimension, boolean active, UUID 
 			buf.writeBoolean(payload.cinematic());
 			buf.writeDouble(payload.origin().x); buf.writeDouble(payload.origin().y); buf.writeDouble(payload.origin().z);
 			buf.writeFloat(payload.yaw());
+			buf.writeEnumConstant(payload.pose());
 		}
 	};
 	@Override public Id<? extends CustomPayload> getId() { return ID; }

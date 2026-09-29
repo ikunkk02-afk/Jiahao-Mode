@@ -11,6 +11,7 @@ public abstract class ServerPlayerQuoteDamageMixin {
  @WrapMethod(method="damage")
  private boolean jiahao$actualDamage(DamageSource source,float amount,Operation<Boolean> original){
   var p=(ServerPlayerEntity)(Object)this;
+  if(amount>0)com.shouyun.jiahaomode.moment.JiahaoMomentManager.combat(p);
   float before=p.getHealth()+p.getAbsorptionAmount();
   boolean result=original.call(source,amount);
   float actual=before-p.getHealth()-p.getAbsorptionAmount();

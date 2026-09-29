@@ -113,11 +113,12 @@ public final class JiahaoDodgeClientController {
     public static Visual local() { var p = MinecraftClient.getInstance().player; return p == null ? null : visual(p); }
     public static boolean locksMovement() { var v = local(); return v != null && v.active; }
     public static double cameraWeight() {
-        if (JiahaoCinematicController.isCameraActive()) return 0;
+        if (!JiahaoCinematicController.canUseCamera(com.shouyun.jiahaomode.cinematic.CinematicType.PERFECT_DODGE)) return 0;
         var v = local(); if (v == null || v.perfectAt < 0) return 0;
         return Math.sin(Math.PI * Math.max(0, Math.min(1, (frame - v.perfectAt) / 6)));
     }
     public static double fovOffset() { return 4 * cameraWeight(); }
+    public static void suppressCamera() { var v=local(); if(v!=null)v.perfectAt=-1; }
     public static double cameraRoll() { var v = local(); return v == null ? 0 : -4 * v.sideways * cameraWeight(); }
     /** Called after vanilla's final reconciliation so its coordinate is not overwritten by a queued sample. */
     public static void reconciled() { if (localReconcileAction != 0) { pending = null; localReconcileAction = 0; } }

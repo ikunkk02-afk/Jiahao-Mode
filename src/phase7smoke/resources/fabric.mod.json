@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"jiahao-phase7-smoke","version":"1.0.0","name":"Stage 7 Real Client Verification","environment":"*","entrypoints":{"main":["com.shouyun.jiahaomode.test.phase7.Phase7Server"],"client":["com.shouyun.jiahaomode.test.phase7.Phase7Client"]},"mixins":["phase7-smoke.mixins.json"],"depends":{"jiahao-mode":"*"}}

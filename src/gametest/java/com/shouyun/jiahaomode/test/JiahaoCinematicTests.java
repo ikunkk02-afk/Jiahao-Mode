@@ -24,7 +24,7 @@ import java.util.List;
 public final class JiahaoCinematicTests implements FabricGameTest {
     private static final List<Scenario> RUNNING = new ArrayList<>();
     static { ServerTickEvents.END_SERVER_TICK.register(server -> RUNNING.removeIf(test -> test.server == server && test.tick())); }
-    @GameTest(templateName = EMPTY_STRUCTURE, batchId = "jiahao_cinematic", tickLimit = 1000)
+    @GameTest(templateName = EMPTY_STRUCTURE, batchId = "jiahao_cinematic", tickLimit = 2000)
     public void cinematicLifecycle(TestContext context) { RUNNING.add(new Scenario(context)); }
     private static final class Scenario {
         final TestContext context;
@@ -34,6 +34,7 @@ public final class JiahaoCinematicTests implements FabricGameTest {
         final Vec3d origin;
         long start;
         int stage;
+        com.shouyun.jiahaomode.cinematic.JiahaoPoseType lastPose;
         Scenario(TestContext context) {
             this.context = context; server = context.getWorld().getServer();
             actor = JiahaoTransformationTests.connectTestPlayer(server, context.getWorld(), "CinematicTest");
@@ -48,7 +49,7 @@ public final class JiahaoCinematicTests implements FabricGameTest {
             player.networkHandler.onCustomPayload(new CustomPayloadC2SPacket(new RegistrationPayload(RegistrationPayload.REGISTER, List.of(JiahaoTimeStatePayload.ID.id()))));
             JiahaoStateManager.setJiahao(player, true);
             check(JiahaoTimeStopManager.isStableForCinematic(player), "Grounded fixture is stable");
-            check(JiahaoTimeStopManager.startTimeStop(player), "Start succeeds");
+            check(startWithPose(), "Start succeeds");
             check(JiahaoTimeStopManager.isCinematicLocked(player), "Stable owner enters cinematic");
             check(player.getVelocity().equals(Vec3d.ZERO), "Residual velocity cleared once");
             start = JiahaoTimeStopManager.getServerTick(server);
@@ -78,7 +79,7 @@ public final class JiahaoCinematicTests implements FabricGameTest {
                                     .map(packet -> (JiahaoTimeStatePayload) ((CustomPayloadS2CPacket) packet).payload()).filter(JiahaoTimeStatePayload::active)
                                     .findFirst().orElseThrow();
                             check(late.cinematic() && late.elapsedTicks() == 40 && late.owner().equals(player.getUuid())
-                                    && late.session().equals(snapshots.getFirst().session()) && late.origin().equals(origin),
+                                    && late.session().equals(snapshots.getFirst().session()) && late.pose()==snapshots.getFirst().pose() && late.origin().equals(origin),
                                     "Late observer receives current pose time, same session, owner and anchor through existing S2C");
                         }
                     } else if (elapsed == 100) {
@@ -86,42 +87,42 @@ public final class JiahaoCinematicTests implements FabricGameTest {
                         player.jump(); check(player.getVelocity().y > 0, "Jump restores while world still frozen");
                         player.move(MovementType.SELF, new Vec3d(.1, 0, 0));
                         check(player.getX() > origin.x, "Travel restores");
-                    } else if (elapsed == 160) {
-                        check(!JiahaoTimeStopManager.isTimeStopped(context.getWorld()), "World resumes at 160"); stage = 1;
+                    } else if (elapsed == 300) {
+                        check(!JiahaoTimeStopManager.isTimeStopped(context.getWorld()), "World resumes at 300"); stage = 1;
                     }
-                } else if (stage == 1 && elapsed >= 220) {
+                } else if (stage == 1 && elapsed >= 460) {
                     player.setPosition(origin.add(0, 3, 0)); player.setOnGround(false); player.setVelocity(0,-.2,0);
-                    check(JiahaoTimeStopManager.startTimeStop(player), "Airborne time stop still succeeds");
+                    check(startWithPose(), "Airborne time stop still succeeds");
                     check(!JiahaoTimeStopManager.isCinematicLocked(player), "Airborne start skips cinematic");
                     player.setPosition(origin); player.setOnGround(true); player.setVelocity(Vec3d.ZERO);
                     stage = 2; start = JiahaoTimeStopManager.getServerTick(server);
                 } else if (stage == 2 && elapsed >= 10) {
                     check(!JiahaoTimeStopManager.isCinematicLocked(player), "Landing never starts a skipped sequence");
                     JiahaoTimeStopManager.stopTimeStop(player); stage = 3; start = JiahaoTimeStopManager.getServerTick(server);
-                } else if (stage == 3 && elapsed >= 60) {
+                } else if (stage == 3 && elapsed >= 160) {
                     player.setPosition(origin); player.setOnGround(true); player.setVelocity(Vec3d.ZERO);
-                    check(JiahaoTimeStopManager.startTimeStop(player) && JiahaoTimeStopManager.isCinematicLocked(player), "Next stable stop starts another sequence");
+                    check(startWithPose() && JiahaoTimeStopManager.isCinematicLocked(player), "Next stable stop starts another sequence");
                     player.setPosition(origin.add(1,0,0)); stage = 4;
                 } else if (stage == 4) {
                     check(!JiahaoTimeStopManager.isCinematicLocked(player) && JiahaoTimeStopManager.isTimeStopped(context.getWorld()), "External position change cancels cinematic alone");
                     JiahaoTimeStopManager.stopTimeStop(player); stage = 5; start = JiahaoTimeStopManager.getServerTick(server);
-                } else if (stage == 5 && elapsed >= 60) {
+                } else if (stage == 5 && elapsed >= 160) {
                     player.setPosition(origin); player.setOnGround(true); player.setVelocity(Vec3d.ZERO);
-                    check(JiahaoTimeStopManager.startTimeStop(player) && JiahaoTimeStopManager.isCinematicLocked(player), "Start for second-R test");
+                    check(startWithPose() && JiahaoTimeStopManager.isCinematicLocked(player), "Start for second-R test");
                     com.shouyun.jiahaomode.network.JiahaoTimeNetworking.handleToggle(player);
                     check(!JiahaoTimeStopManager.isCinematicLocked(player) && !JiahaoTimeStopManager.isTimeStopped(context.getWorld()), "Second R releases both states");
                     stage = 6; start = JiahaoTimeStopManager.getServerTick(server);
-                } else if (stage == 6 && elapsed >= 60) {
+                } else if (stage == 6 && elapsed >= 160) {
                     player.setPosition(origin); player.setOnGround(true); player.setVelocity(Vec3d.ZERO);
-                    check(JiahaoTimeStopManager.startTimeStop(player) && JiahaoTimeStopManager.isCinematicLocked(player), "Start for dimension test");
+                    check(startWithPose() && JiahaoTimeStopManager.isCinematicLocked(player), "Start for dimension test");
                     player.teleportTo(new net.minecraft.world.TeleportTarget(server.getWorld(net.minecraft.world.World.NETHER),
                             new Vec3d(0,80,0), Vec3d.ZERO,0,0,net.minecraft.world.TeleportTarget.NO_OP));
                     check(!JiahaoTimeStopManager.isTimeStopped(context.getWorld()) && !JiahaoTimeStopManager.isCinematicLocked(player), "Dimension change releases cinematic");
                     player.teleportTo(new net.minecraft.world.TeleportTarget(context.getWorld(),origin,Vec3d.ZERO,0,0,net.minecraft.world.TeleportTarget.NO_OP));
                     stage = 7; start = JiahaoTimeStopManager.getServerTick(server);
-                } else if (stage == 7 && elapsed >= 60) {
+                } else if (stage == 7 && elapsed >= 160) {
                     player.setPosition(origin); player.setOnGround(true); player.setVelocity(Vec3d.ZERO);
-                    check(JiahaoTimeStopManager.startTimeStop(player) && JiahaoTimeStopManager.isCinematicLocked(player), "Start for death test");
+                    check(startWithPose() && JiahaoTimeStopManager.isCinematicLocked(player), "Start for death test");
                     player.setHealth(0); player.onDeath(player.getServerWorld().getDamageSources().generic());
                     check(!JiahaoTimeStopManager.isCinematicLocked(player) && !JiahaoTimeStopManager.isTimeStopped(context.getWorld()), "Death releases both states");
                     stage = 8;
@@ -137,6 +138,13 @@ public final class JiahaoCinematicTests implements FabricGameTest {
                 if (observer != null) { server.getPlayerManager().remove(observer.player()); observer.channel().finishAndReleaseAll(); }
                 context.runAtTick(context.getTick() + 1, () -> context.throwGameTestException(failure.toString())); return true;
             }
+        }
+        private boolean startWithPose() {
+            if (!JiahaoTimeStopManager.startTimeStop(actor.player())) return false;
+            var packet = actor.channel().outboundMessages().stream().filter(x -> x instanceof CustomPayloadS2CPacket cp && cp.payload() instanceof JiahaoTimeStatePayload)
+                    .map(x -> (JiahaoTimeStatePayload)((CustomPayloadS2CPacket)x).payload()).filter(JiahaoTimeStatePayload::active).reduce((a,b)->b).orElseThrow();
+            check(packet.pose()!=com.shouyun.jiahaomode.cinematic.JiahaoPoseType.DEFAULT && packet.pose()!=lastPose,"Server chooses a new non-repeating Pose");
+            lastPose=packet.pose();return true;
         }
         private void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
     }

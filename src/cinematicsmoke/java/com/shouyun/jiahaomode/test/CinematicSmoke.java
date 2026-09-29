@@ -66,7 +66,10 @@ public final class CinematicSmoke implements ClientModInitializer {
                     frames++;
                     double elapsed = JiahaoCinematicController.elapsedTicks();
                     check(elapsed >= lastElapsed, "Render progress is monotonic"); lastElapsed = elapsed;
-                    check(context.camera().isThirdPerson(), "First-person owner model must be visible");
+                    if(perspective==Perspective.FIRST_PERSON){
+                        var eye=client.player.getLerpedPos(context.camera().getLastTickDelta()).add(0,client.player.getStandingEyeHeight(),0);
+                        check(context.camera().isThirdPerson()==(context.camera().getPos().squaredDistanceTo(eye)>1.6*1.6),"Actor model appears only after the first-person camera clears the body");
+                    }else check(context.camera().isThirdPerson(),"Third-person actor model remains visible");
                     check(client.options.getPerspective() == perspective, "Perspective option never changes");
                     check(client.options.getFov().getValue() == fov, "FOV option never changes");
                     if (!JiahaoCinematicController.isReturning()) {
@@ -100,11 +103,12 @@ public final class CinematicSmoke implements ClientModInitializer {
     private void tick(MinecraftClient client) {
         try {
             if (failure != null) { finish(client, false); return; }
-            if (++totalTicks > 3200) throw new AssertionError("Cinematic smoke watchdog");
+            if (++totalTicks > 6500) throw new AssertionError("Cinematic smoke watchdog");
             ticks++;
             if (stage == 0) {
                 if (client.player == null || client.world == null || client.getServer() == null || ticks < 100) return;
                 client.options.pauseOnLostFocus = false; client.options.getMaxFps().setValue(180); client.setScreen(null);
+                ClientPlayNetworking.send(new com.shouyun.jiahaomode.network.JiahaoMomentPreferencePayload(false));
                 configure(client); stage = 1; ticks = 0; return;
             }
             if (stage == 1 && ticks > 80) {
@@ -164,10 +168,10 @@ public final class CinematicSmoke implements ClientModInitializer {
                 JiahaoMode.LOGGER.info("CINEMATIC CYCLE {} PASSED: {} rendered frames, {} moving frames, perspective {}", cycle, frames, movingFrames, perspective);
                 stage = 4; ticks = 0; return;
             }
-            if (stage == 4 && ticks > 100) {
+            if (stage == 4 && ticks > 360) {
                 if (cycle == 4 && client.player != null && !client.player.isAlive()) {
                     client.getNetworkHandler().sendPacket(new ClientStatusC2SPacket(ClientStatusC2SPacket.Mode.PERFORM_RESPAWN));
-                    client.setScreen(null); ticks = 60; return;
+                    client.setScreen(null); ticks = 320; return;
                 }
                 if (client.player == null || !client.player.isAlive()) return;
                 cycle++; configure(client); stage = 1; ticks = 0;
@@ -194,8 +198,11 @@ public final class CinematicSmoke implements ClientModInitializer {
         var actor = new OtherClientPlayerEntity(client.world, new GameProfile(UUID.randomUUID(), "PoseObserverFixture"));
         var renderer = (PlayerEntityRenderer) client.getEntityRenderDispatcher().getRenderer(actor);
         var model = renderer.getModel();
+        model.rightArmPose=net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose.EMPTY;
+        model.leftArmPose=net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose.EMPTY;
+        model.sneaking=false;
         UUID session = UUID.randomUUID();
-        var payload = new JiahaoTimeStatePayload(client.world.getRegistryKey().getValue(),true,actor.getUuid(),110,
+        var payload = new JiahaoTimeStatePayload(client.world.getRegistryKey().getValue(),true,actor.getUuid(),250,
                 client.world.getTime(),client.world.getTimeOfDay(),session,50,true,actor.getPos(),0);
         JiahaoCinematicController.onStateSync(client.world, payload);
         check(!JiahaoCinematicController.isCameraActive() && !JiahaoCinematicController.locksInput(), "Observer never gets camera/input override");

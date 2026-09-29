@@ -16,7 +16,7 @@ public abstract class EntityCinematicMovementMixin {
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void jiahao$holdPosition(MovementType type, Vec3d movement, CallbackInfo ci) {
         Entity entity = (Entity) (Object) this;
-        if (JiahaoTimeStopManager.isCinematicLocked(entity)) {
+        if (com.shouyun.jiahaomode.cinematic.JiahaoCinematicLocks.isLocked(entity)) {
             entity.setVelocity(Vec3d.ZERO);
             ci.cancel();
         }

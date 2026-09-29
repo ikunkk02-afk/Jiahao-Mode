@@ -4,7 +4,7 @@ Minecraft 1.21.1，Yarn 1.21.1+build.3，Fabric API 0.116.17+1.21.1。
 没有升级依赖。包为 `com.shouyun.jiahaomode`，Mod ID 为 `jiahao-mode`。
 
 第三阶段已在原系统上接入约 5 秒 Camera/Pose 演出，完整说明见 [CINEMATIC.md](CINEMATIC.md)。
-稳定站立的拥有者前 100 Tick 额外锁定位移与交互，之后恢复自由操作；暂停仍持续最多 160 Tick。
+稳定站立的拥有者前 100 Tick 额外锁定位移与交互，之后恢复自由操作；暂停仍持续最多 300 Tick。
 空中等不稳定情况下直接跳过演出，保留原暂停行为。下文文件表记录第二阶段基础实现。
 
 ## 文件变更
@@ -54,7 +54,7 @@ S2C `JiahaoTimeStatePayload` 的 ID 为 `jiahao-mode:time_state`，包含维度 
 游戏时间/Day Time 快照、逻辑时间偏移及其他玩家的坐标/旋转记录。
 另有 UUID → 冷却截止 Tick。没有全局 active boolean，没有 NBT 存储 active。
 
-`START_SERVER_TICK` 增长独立 `long` 时钟，160 Tick 自动结束，结束后冷却 60 Tick。
+`START_SERVER_TICK` 增长独立 `long` 时钟，300 Tick 自动结束，结束后冷却 160 Tick。
 每 Tick 检查活动维度的拥有者有效性并锁定新加入的玩家；不遍历全部实体，不复制实体 NBT，
 不扫描区块或保存全部方块实体状态。
 
@@ -100,7 +100,7 @@ S2C `JiahaoTimeStatePayload` 的 ID 为 `jiahao-mode:time_state`，包含维度 
 小数 Tick；雨雪的纹理滚动和随机列动画、云的世界空间漂移均使用这组参数。
 相机坐标和视角仍由原版传入，所以玩家可以从其他位置观察同一片静止天气。
 恢复时设置 `offset = 当前原版时间 - 冻结时间`，随后按原版速率推进；多次暂停累计偏移，
-没有 160 Tick 的追赶跳跃。切换世界后重置，不持有上一存档的冻结状态。
+没有 300 Tick 的追赶跳跃。切换世界后重置，不持有上一存档的冻结状态。
 
 | 客户端 Mixin | 作用 |
 |---|---|

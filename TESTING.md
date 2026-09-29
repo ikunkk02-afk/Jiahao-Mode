@@ -626,3 +626,25 @@ offline-mode 聊天验证提示仍存在，未阻止本轮构建、资源显示�
 - `build/run/dodgeDedicated/dodge-server-result.txt`
 - `build/run/dodgeActor/dodge-client-result.txt`、`build/run/dodgeObserver/dodge-client-result.txt`
 - `build/run/dodgeActor/screenshots/actor-perfect.png`、`build/run/dodgeObserver/screenshots/observer-dodge-pose.png`
+
+
+## 第七阶段（2026-09-30）
+
+本节记录当前第七阶段版本；前文是既往阶段的历史验收记录。
+
+- 每个主要模块完成后运行 `gradlew.bat build`，最终构建见 `build/phase7-final-build.log`：`BUILD SUCCESSFUL`。18 个必需服务器 GameTest 全通过，四组客户端纯数学/数据模型检查通过（冻结时钟、运镜、Pose、娱乐道具）。
+- 模块构建记录：`build/phase7-{pose,duration,quotes,moment,textures,market,code}-build.log` 均 `BUILD SUCCESSFUL`。
+- `gradlew.bat --no-configuration-cache -I scripts/cinematic-smoke.gradle runClient`：`CINEMATIC SMOKE PASSED` 和 `BUILD SUCCESSFUL`。三种原版视角、初始模型可见性、相机碰撞、八套静态模型恢复、护甲跟随、提前解除、死亡/换维度/断线清理通过。
+- 既有 `quote-smoke.gradle`、`weather-visual-smoke.gradle`、`dodge-smoke.gradle` 的真实 `runClient` 回归均 `BUILD SUCCESSFUL`；天气 15 秒恢复、固定台词与完美闪避仍可用。
+- `scripts/phase7-multiplayer-smoke.gradle` 导出配置、`scripts/phase7-multiplayer-smoke.py` 协调一个独立 Dedicated Server 和两个真实 JVM 客户端，三进程结果均 PASSED，正常断开及保存。仅连接 `127.0.0.1:25579`；隔离目录在 `build/run/phase7Dedicated`、`phase7Actor`、`phase7Observer`。测试客户端同时演出时各有自己的镜头，旁观者只看到演员 Pose；首次随机窗口按 900–2400 Tick 自然发生，世界继续运行，字幕按时出现。GUI 拒绝窗口、个人开关、时停接管镜头、时停演出结束后仍可闪避、受伤和打开 GUI 后清理会话均通过。
+- 两个 GUI 在嘉豪/普通形态下均右键打开；真实 `/give` 三种物品成功。Market 截图可见轴、网格、80 点起步的变化折线、价格与涨跌；BUY/SELL 无数据副作用。Code Screen 实际键入 `test`、`dir`、`cmd`、`powershell`、`rm`、`bash`、`time.stop()` 都只生成字面文本和假进度；两种 GUI 的 ESC 和重新打开行为通过。
+- `scripts/verify-phase7-release.py` 从发布 JAR 检查三张 16×16 RGBA 透明 PNG、模型引用、两份配方、42 句原文/英文对应、唯一语言键、客户端与 Dedicated Server 边界及无系统执行/文件/网络接口；输出 `PHASE7 RELEASE VERIFICATION PASSED`。
+- 审美验收可打开本地 [视觉检查页](build/verification/phase7-review.html)：七套 Pose、真实时停/随机演出、两种 GUI、三张正式图标。游戏性能上纯行情模型十万次更新仍最多 128 点；终端最长 128 字、20 条历史、80 行输出。
+
+本地证据（`build/` 已忽略，不进入仓库）：
+
+- `build/phase7-final-build.log`、`build/phase7-cinematic-final.log`、`build/phase7-weather-regression.log`、`build/phase7-quote-regression.log`、`build/phase7-dodge-regression.log`
+- `build/phase7-multiplayer-summary.log`、`build/phase7-multiplayer-first-{server,actor,observer}.log`、`build/phase7-release-verification.txt`
+- `build/run/phase7{Dedicated,Actor,Observer}/*-result.txt`、`build/run/phase7Actor/screenshots/`
+
+TEST 1–24 的对应关系和实现细节见 [STAGE7.md](STAGE7.md)。人工仍需以自己使用的角色皮肤和画面设置确认 Pose 观感、镜头构图、三个 16×16 图标及两个 GUI 的视觉偏好。
