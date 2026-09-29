@@ -20,7 +20,7 @@ public final class JiahaoQuoteManager {
   final Map<UUID,History> histories=new HashMap<>();
  }
  private static final class History {
-  long manualUntil, ordinaryUntil;
+  long manualUntil, ordinaryUntil, perfectUntil;
   Identifier last;
   final Map<JiahaoQuoteCategory,Identifier> lastCategory=new EnumMap<>(JiahaoQuoteCategory.class);
  }
@@ -65,11 +65,13 @@ public final class JiahaoQuoteManager {
   if(s.session!=null&&!s.cueSent&&!special)return false;
   if(t<s.until&&(!special||category.priority<=s.priority))return false;
   if(category==MANUAL&&t<h.manualUntil)return false;
+  if(category==PERFECT_DODGE&&(t<h.perfectUntil||JiahaoTimeStopManager.isCinematicLocked(p)))return false;
   if(!special&&category!=MANUAL&&t<h.ordinaryUntil)return false;
   var quote=JiahaoQuoteRegistry.select(category,h.last,h.lastCategory.get(category),bound->p.getRandom().nextInt(bound));
   s.until=t+quote.displayTicks();s.priority=quote.priority();
   h.last=quote.id();h.lastCategory.put(category,quote.id());h.ordinaryUntil=t+60;
   if(category==MANUAL)h.manualUntil=t+50;
+  if(category==PERFECT_DODGE)h.perfectUntil=t+80;
   var payload=new JiahaoQuoteSyncPayload(p.getUuid(),s.dimension,quote.id(),++r.sequence,session);
   for(var recipient:p.getServerWorld().getPlayers()) {
    if(recipient.squaredDistanceTo(p)<=64*64&&ServerPlayNetworking.canSend(recipient,JiahaoQuoteSyncPayload.ID)) {
@@ -104,6 +106,7 @@ public final class JiahaoQuoteManager {
   if(s!=null&&!s.lowPending&&p.getHealth()>=p.getMaxHealth()*.3f&&actual>=2&&p.getRandom().nextFloat()<.18f)emit(p,TAKE_DAMAGE,null);
  }
  public static void killed(ServerPlayerEntity p){activity(p);if(valid(p)&&p.getRandom().nextFloat()<.2f)emit(p,KILL_ENTITY,null);}
+ public static boolean perfectDodge(ServerPlayerEntity p){activity(p);return emit(p,PERFECT_DODGE,null);}
  private static void health(ServerPlayerEntity p){
   State s=runtime(p.getServer()).active.get(p.getUuid());if(s==null)return;
   float ratio=p.getHealth()/p.getMaxHealth();

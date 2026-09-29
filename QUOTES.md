@@ -8,7 +8,7 @@ Minecraft 1.21.1 / Fabric；沿用 `com.shouyun.jiahaomode`。本阶段仅文本
 
 - `quote/JiahaoQuote.java`：不可变语录 record。
 - `quote/JiahaoQuoteCategory.java`：类别、优先级及初始条目数。
-- `quote/JiahaoQuoteRegistry.java`：37 条语录定义、按类别检索和不重复选择。
+- `quote/JiahaoQuoteRegistry.java`：43 条语录定义（第五阶段补充 6 条 PERFECT_DODGE）、按类别检索和不重复选择。
 - `quote/JiahaoQuoteManager.java`：服务器权威、预约、冷却、会话与接收者。
 - `quote/JiahaoQuoteTrigger.java`：生命周期、攻击、死亡事件接入。
 - `network/JiahaoQuoteNetworking.java`：频道及服务器接收器注册。
@@ -41,6 +41,7 @@ soundId 预留未来 SoundEvent 的注册 ID；当前所有条目为空，不加
 | TRANSFORM | 4 | 20 |
 | TIME_STOP_START | 5 | 30 |
 | TIME_STOP_END | 4 | 30 |
+| PERFECT_DODGE | 6 | 35 |
 | CINEMATIC | 1 | 40 |
 | LOW_HEALTH | 4 | 20 |
 | TAKE_DAMAGE | 4 | 10 |
@@ -69,6 +70,7 @@ S2C 含 UUID、维度、Quote ID、递增事件编号和可选演出 session；Q
 - 时间暂停成功后使用原有 session。可演出时预约第 74 Tick，取消尚未播出的 TRANSFORM，并阻止普通台词插入。本人客户端等到实际 Timeline 至少 0.74 才开始字幕；其他人显示头顶文字。
 - 无法演出或在发句前中止时回退 TIME_STOP_START；已发 CINEMATIC 则不回退。同一会话只发一次。
 - 正常到时或主动 R 结束触发 TIME_STOP_END；高优先级文本未结束时延后到其结束后 5 Tick。死亡、退出、换维度、解除形态不播结束语录。
+- 第五阶段由服务器 `ALLOW_DAMAGE` 成功消费完美机会后调用 `perfectDodge`。首次符合播放条件必播，随后成功播放至少相隔 80 Tick；不覆盖 CINEMATIC。受冷却或高优先级文本阻挡时不播语录，但音效、粒子、Pose 和本人镜头始终触发。
 
 ## 冷却、优先级和清理
 

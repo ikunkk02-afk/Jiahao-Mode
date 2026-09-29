@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-dodge-multiplayer-smoke",
+  "version": "1.0.0",
+  "environment": "*",
+  "license": "MIT",
+  "entrypoints": {
+    "main": ["com.shouyun.jiahaomode.test.multiplayer.DodgeMultiplayerServer"],
+    "client": ["com.shouyun.jiahaomode.test.multiplayer.DodgeMultiplayerClient"]
+  },
+  "mixins": [{"config": "dodge-multiplayer.mixins.json", "environment": "client"}],
+  "depends": {"jiahao-mode": "*"}
+}

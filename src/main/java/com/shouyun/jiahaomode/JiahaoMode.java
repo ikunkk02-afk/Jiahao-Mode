@@ -25,6 +25,8 @@ public class JiahaoMode implements ModInitializer {
 		com.shouyun.jiahaomode.timestop.JiahaoTimeStopManager.initialize();
 		com.shouyun.jiahaomode.network.JiahaoQuoteNetworking.initialize();
 		com.shouyun.jiahaomode.quote.JiahaoQuoteTrigger.initialize();
+		com.shouyun.jiahaomode.network.JiahaoDodgeNetworking.initialize();
+		com.shouyun.jiahaomode.dodge.JiahaoDodgeManager.initialize();
 		LOGGER.info("Jiahao transformation system initialized");
 	}
 

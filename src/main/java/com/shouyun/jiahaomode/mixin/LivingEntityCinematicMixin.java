@@ -12,6 +12,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class LivingEntityCinematicMixin {
     @Inject(method = "jump", at = @At("HEAD"), cancellable = true)
     private void jiahao$noJump(CallbackInfo ci) {
-        if (JiahaoTimeStopManager.isCinematicLocked((LivingEntity) (Object) this)) ci.cancel();
+        LivingEntity entity = (LivingEntity)(Object)this;
+        if (JiahaoTimeStopManager.isCinematicLocked(entity)
+                || entity instanceof net.minecraft.entity.player.PlayerEntity player
+                && com.shouyun.jiahaomode.dodge.JiahaoDodgeManager.isDodging(player)) ci.cancel();
     }
 }

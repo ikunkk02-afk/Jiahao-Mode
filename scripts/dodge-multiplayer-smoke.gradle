@@ -1,0 +1,41 @@
+// Export the configured Loom launch commands for one isolated server and two real clients.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('dodgeMultiplayer')
+        smoke.java.setSrcDirs(['src/dodgemultiplayer/java'])
+        smoke.resources.setSrcDirs(['src/dodgemultiplayer/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-dodge-multiplayer-smoke') { sourceSet smoke }
+        def role = project.findProperty('dodgeRole') ?: 'actor'
+        def isolatedDirectory = project.file(role == 'server' ? 'build/run/dodgeDedicated' : "build/run/dodge${role.capitalize()}")
+        loom.runs.server {
+            runDir 'build/run/dodgeDedicated'
+            programArgs 'nogui'
+        }
+        loom.runs.client {
+            runDir "build/run/dodge${role.capitalize()}"
+            programArgs '--username', role == 'observer' ? 'DodgeObserver' : 'DodgeActor',
+                    '--quickPlayMultiplayer', '127.0.0.1:25576', '--width', '960', '--height', '540'
+        }
+        ['runServer', 'runClient'].each { name ->
+            tasks.named(name) { dependsOn tasks.named('dodgeMultiplayerClasses'); classpath += smoke.output }
+        }
+        tasks.register('exportDodgeLaunch') {
+            dependsOn tasks.named('dodgeMultiplayerClasses'), tasks.named('configureLaunch'), tasks.named('generateDLIConfig')
+            def output = project.file("build/verification/dodge-${role}-launch.json")
+            def task = tasks.named(role == 'server' ? 'runServer' : 'runClient').get()
+            def launchSpec = [
+                executable: task.javaLauncher.get().executablePath.asFile.absolutePath,
+                directory: isolatedDirectory.absolutePath,
+                arguments: task.allJvmArgs.findAll { !it.startsWith('@') } + ['-classpath', task.classpath.asPath, task.mainClass.get()] +
+                    (role == 'server' ? ['nogui'] : ['--username', role == 'observer' ? 'DodgeObserver' : 'DodgeActor',
+                        '--quickPlayMultiplayer', '127.0.0.1:25576', '--width', '960', '--height', '540'])
+            ]
+            doLast {
+                output.parentFile.mkdirs()
+                output.text = groovy.json.JsonOutput.toJson(launchSpec)
+            }
+        }
+    }
+}

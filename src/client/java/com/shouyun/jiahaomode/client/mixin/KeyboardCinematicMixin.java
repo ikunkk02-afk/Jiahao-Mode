@@ -13,7 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class KeyboardCinematicMixin extends Input {
     @Inject(method = "tick", at = @At("TAIL"))
     private void jiahao$input(CallbackInfo ci) {
-        if (!JiahaoCinematicController.locksInput()) return;
+        if (!JiahaoCinematicController.locksInput()
+                && !com.shouyun.jiahaomode.client.JiahaoDodgeClientController.locksMovement()) return;
         movementForward = movementSideways = 0;
         pressingForward = pressingBack = pressingLeft = pressingRight = jumping = sneaking = false;
     }

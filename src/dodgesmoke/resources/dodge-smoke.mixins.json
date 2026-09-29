@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "com.shouyun.jiahaomode.test.dodgemixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["DodgeCaptureMixin"],
+  "injectors": {"defaultRequire": 1}
+}

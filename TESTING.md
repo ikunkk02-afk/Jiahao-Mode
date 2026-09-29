@@ -1,6 +1,6 @@
 # 第一阶段验证记录
 
-最新的第三阶段电影演出验证位于本文末尾；上方第一、二阶段条目保留历史验证范围。
+最新的第五阶段闪避验证位于本文末尾；上方各阶段条目保留历史验证范围。
 
 验证日期：2026-09-28。Minecraft 1.21.1 / Yarn 1.21.1+build.3 /
 Fabric Loader 0.19.5 / Fabric API 0.116.17+1.21.1。
@@ -410,3 +410,112 @@ Fancy 云时钟、天气强度、天空、普通/免疫粒子、8 秒自动恢�
 - `build/quote-weather-regression.log`（Gradle 元数据连接失败）
 - `build/quote-weather-cached-runtime.log`（最终实际天气测试通过）
 - `build/quote-dedicated-cached-runtime.log`（最终实际服务器启动/退出通过）
+
+# 第五阶段：闪避与完美闪避验证记录
+
+日期：2026-09-29。实现、文件清单、参数和用户 30 项交付对应见 [DODGE.md](DODGE.md)。
+Minecraft/Fabric/Yarn 及业务依赖版本没有改变；Java 编译目标仍为 21。
+
+## 构建前置恢复
+
+第四阶段末尾及本轮初始 `build --dry-run` 的失败发生于 Mojang 版本清单 TLS 下载阶段，未进入编译。
+已通过本机已有代理与核实的 Mojang 官方服务地址恢复下载，将**未经修改的官方版本清单**放到
+Loom 正常缓存位置。curl 保持证书校验，没有伪造版本元数据、关闭 TLS 或替换项目依赖。
+之后显式 `gradlew.bat build` 和各 `runClient` 均能正常配置和运行，不需要离线替代启动。
+Mojang 账号公钥/皮肤资料服务仍有网络警告，和已恢复的依赖元数据下载分别记录。
+
+## 构建及服务端集成测试
+
+- 最终 `gradlew.bat build --console=plain`：`BUILD SUCCESSFUL`；**13 个必需 GameTest 全通过**。
+- 原有形态、天气/实体冻结、Cinematic、语录测试与视觉时钟/镜头数学检查保留。
+- 新增 8 个闪避场景：方向/分类、运动/包/冷却/障碍、伤害/行政、空中窗口、真实伤害边界、
+  演出与暂停拥有者/盾牌/死亡、跨维度/退出、冷却/语录/连完美边界。
+- 真正运行 ServerPlayer 的 network handler Tick 和 travel，而非用 setPosition 模拟技能位移。
+
+| 核验 | 实际覆盖 |
+|---|---|
+| 方向与速度 | Yaw 0/90/180/-90/33，前后左右、对角归一化、相反抵消、无输入后撤、六步总 2.8 格、递减且不超过 1.2 |
+| 请求与位置 | typed C2S、非法位 255 拒绝、同动作 100 次连发拒绝、伪造坐标和落地声明丢弃、合法视角保留且方向不改变 |
+| 冷却 | 结束后冷却、最后一个冷却 Tick 拒绝、恰好到期接受；变身切换不能绕过 |
+| 碰撞 | 原版完整墙、关闭木门和墙角均裁剪位移；最终包围盒不嵌入墙 |
+| 空中 | 保留下降、离地最多一次、冷却结束仍不能第二次、服务端落地重置；真实悬崖含潜行状态无抬升/悬崖安全补偿，fall 来源仍伤害 |
+| 完美 | Tick 0 近战取消、Tick 3 箭取消、Tick 4 箭伤害正常、同动作第二击正常、金额 0 不消费；晚请求不能撤销已经发生的伤害 |
+| 分类与扩展 | 环境/周期/虚空/行政排除；三叉戟和魔法投射物来源、未知模组近战/投射物来源允许；测试数据包 undodgeable 类型优先拒绝 |
+| 行政 | 实际执行 `/damage @s 2 minecraft:arrow`，健康减少且机会不消费；genericKill 死亡不取消并清除动作 |
+| 使用与暂停 | shield 使用被停止；演出中拒绝 C，独立 server Tick 104 时仍处于暂停但拥有者允许 C |
+| 清理 | 在动作已经 travel 后真实跨维度，清除旧水平技能速度并保留原版垂直速度；保留冷却，退出清除旧历史 |
+| 语录与连完美 | 首次符合条件必播、字幕到期后仍受 80 Tick 冷却、恰好 80 Tick 可播；60 Tick 内连续成功累加 |
+
+额外测试类型/标签仅放在 gametest 资源中，没有进入发布 JAR。
+
+## 真实单机客户端
+
+显式执行 `gradlew.bat -I scripts/dodge-smoke.gradle runClient --console=plain`，结果文件
+`build/run/dodgeSmoke/dodge-smoke-result.txt` 为 `PASSED`，Gradle `BUILD SUCCESSFUL`。
+隔离 DodgeSmoke 存档通过原版 QuickPlay 加载，测试后正常保存三个维度并退出。
+
+- 实际 KeyBinding 按压分派 → C2S → 服务器六步移动 → S2C → 客户端显示，验证默认 C 与原版共享按键仍有效。
+- 非形态请求拒绝；Yaw 对应左闪在客户端真实可见，结束后恢复普通移动。
+- 实际 Zombie `tryAttack`、Skeleton 发射的真实 ArrowEntity、Creeper 点燃/Fuse、TntEntity Fuse=0。
+- 四种攻击都触发完美且本人生命保持 20；TNT/Creeper 对旁边猪造成伤害、破坏羊毛方块，
+  本人额外爆炸击退仍然存在，证明没有取消整个爆炸。
+- 真实渲染帧观察 Pose、完美字幕、FOV 峰值 >3.5°、左 Roll <−3.5°；纯后撤 Roll=0。
+  效果结束 FOV/Roll 回零，用户 Options FOV 不改变。
+- 截图使用原版 ScreenshotRecorder 在完整 framebuffer 渲染后采集，已检查正常侧身、完美效果、
+  语录和雨景；默认测试账号皮肤，未增加皮肤替换。
+- 普通 cloud 与完美 cloud/crit 使用现有暂停免疫接口。旧天气测试同时验证普通/免疫粒子时间行为。
+
+## Dedicated Server 与两个独立客户端
+
+`scripts/dodge-multiplayer-smoke.gradle` 从当前 Loom 配置导出三组真实启动参数，
+`python scripts/dodge-multiplayer-smoke.py` 启动一个 Dedicated Server 和两个独立 JVM 客户端。
+服务器仅绑定 127.0.0.1:25576，隔离世界/玩家/选项位于 build/run；没有访问日常存档。
+
+- server、actor、observer 三个结果文件均 `PASSED`；协调器输出 `DODGE MULTIPLAYER ALL PASSED`。
+- Dedicated Server 启动达到 `Done`；服务器验证六步、2.8 格端点、完美后健康 20。
+- A 实际按 C；B 通过原版玩家实体跟踪收到多个连续位置样本并看到对应 Pose/完美状态。
+- A 镜头有效且恢复；B 的 FOV 和 Roll 始终为零，各自 Options FOV 保持。
+- 两客户端正常断开退出，随后发送原版 stop，服务器正常保存三个维度并以 0 退出。
+- 已检查 B 的 framebuffer 截图，A 模型/名字、雨景和 B 自己的第一人称视角均存在。
+  不是内存网络连接、同进程假客户端或单纯启动成功检查。
+
+## 已有实机回归
+
+| 入口 | 结果 |
+|---|---|
+| `scripts/cinematic-smoke.gradle runClient` | `CINEMATIC SMOKE PASSED`，`BUILD SUCCESSFUL in 1m 45s`；三个视角、镜头/模型、输入、ESC/聊天、再次 R、死亡、维度和断开 |
+| `scripts/weather-visual-smoke.gradle runClient` | `WEATHER VISUAL SMOKE PASSED`，`BUILD SUCCESSFUL in 56s`；真实雨/雪、Fancy 云、天气强度、天空、普通/免疫粒子、暂停/恢复与断开 |
+| `scripts/quote-smoke.gradle runClient` | 结果 `PASSED`，`BUILD SUCCESSFUL in 53s`；V、电影字幕、语录优先级、生命周期和截图 |
+
+旧服务端测试另覆盖变身、下雨、冻结箭/TNT/生物、计划方块/流体、R 生命周期和恢复。
+新增演出/闪避测试使用独立 server Tick，避免把被冻结的 GameTest 世界时钟当作演出计时。
+
+## 发布检查、警告与边界
+
+- 发布 `jiahao-mode-1.0.0.jar` 不含 test 类、smoke 入口、测试 Mixin 或测试伤害类型。
+  main/client 入口和 Mixin 环境区分正确，Dedicated 实际加载成功；43 条中英文语录键完整，伤害标签存在。
+- Git diff 检查无空白错误；提交只包含源码、资源、可重复测试脚本和文档。
+  build、.gradle、存档、日志、截图、导出参数和第三方运行依赖均排除。
+- 保留 JDK 25 的 JNA/native-access/Unsafe/LWJGL 提示、原版山羊音效/shader sampler 警告，
+  Mojang 公钥超时/皮肤资料 TLS 失败及本地 offline-mode 的聊天验证提示。
+  没有新增业务编译 warning 或 Mixin 注入错误，这些环境提示未阻止测试与正常保存退出。
+- 测试客户端按键由原版 KeyBinding API 注入，实际走业务网络和渲染；真实硬件手感、完整动态观感仍需用户体验。
+  自定义伤害类型验证兼容规则，未逐个安装第三方战斗模组；本轮没有新增 Iris/ReplayMod/Flashback 兼容验收。
+  这些观察边界不被表述成已经完成的人工体验测试。
+
+开发中捕获并修正：默认 C 的原版共享键冲突、网络 Tick 恢复旧位置、测试连接的传送确认，
+时间暂停时 GameTest 时钟停止、重跑存档停在下界、行政伤害测试的 Vanilla PvP 限制、
+跨维度保留的闪避余速、截图检查后校正张臂的旋转方向，以及联机参数导出任务捕获 Task 对象导致的 configuration-cache 错误。
+导出脚本现保存普通值，最终配置缓存正常存储；没有用忽略失败的方式取得通过结果。
+
+本地运行证据（不提交）：
+
+- `build/dodge-build.log`
+- `build/dodge-client.log` 与 `build/run/dodgeSmoke/dodge-smoke-result.txt`
+- `build/run/dodgeSmoke/screenshots/dodge-pose-0.png`、`dodge-perfect-0.png`、`dodge-quote.png` 等九张截图
+- `build/dodge-cinematic-regression.log`、`build/dodge-weather-regression.log`、`build/dodge-quote-regression.log`
+- `build/dodge-export-server.log`、`build/dodge-export-actor.log`、`build/dodge-export-observer.log`
+- `build/dodge-multiplayer-server.log`、`build/dodge-multiplayer-actor.log`、`build/dodge-multiplayer-observer.log`
+- `build/run/dodgeDedicated/dodge-server-result.txt`
+- `build/run/dodgeActor/dodge-client-result.txt`、`build/run/dodgeObserver/dodge-client-result.txt`
+- `build/run/dodgeActor/screenshots/actor-perfect.png`、`build/run/dodgeObserver/screenshots/observer-dodge-pose.png`

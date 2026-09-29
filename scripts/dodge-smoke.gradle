@@ -1,0 +1,22 @@
+// Opt-in real client; never included in the distributable.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('dodgeSmoke')
+        smoke.java.setSrcDirs(['src/dodgesmoke/java'])
+        smoke.resources.setSrcDirs(['src/dodgesmoke/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-dodge-smoke') { sourceSet smoke }
+        loom.runs.client {
+            runDir 'build/run/dodgeSmoke'
+            programArgs '--quickPlaySingleplayer', 'DodgeSmoke', '--width', '1280', '--height', '720'
+        }
+        def result = project.file('build/run/dodgeSmoke/dodge-smoke-result.txt')
+        tasks.named('runClient') {
+            dependsOn tasks.named('dodgeSmokeClasses')
+            classpath += smoke.output
+            doFirst { java.nio.file.Files.deleteIfExists(result.toPath()) }
+            doLast { if (!result.exists() || result.text.trim() != 'PASSED') throw new GradleException('Dodge client assertions failed; inspect result/log') }
+        }
+    }
+}

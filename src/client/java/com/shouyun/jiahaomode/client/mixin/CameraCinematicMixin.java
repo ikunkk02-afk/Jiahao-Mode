@@ -18,7 +18,11 @@ public abstract class CameraCinematicMixin {
     @Shadow protected abstract void setRotation(float yaw, float pitch);
     @Inject(method = "update", at = @At("TAIL"))
     private void jiahao$orbit(CallbackInfo ci) {
-        if (!JiahaoCinematicController.isCameraActive()) return;
+        if (!JiahaoCinematicController.isCameraActive()) {
+            double roll = com.shouyun.jiahaomode.client.JiahaoDodgeClientController.cameraRoll();
+            if (roll != 0) ((Camera)(Object)this).getRotation().rotateZ((float)Math.toRadians(roll));
+            return;
+        }
         var frame = JiahaoCinematicCamera.sample((Camera) (Object) this);
         thirdPerson = true;
         setPos(frame.position()); setRotation(frame.yaw(), frame.pitch());

@@ -12,5 +12,7 @@ public class JiahaoModeClient implements ClientModInitializer {
 		JiahaoQuoteKeyBindings.initialize();
 		JiahaoSubtitleRenderer.initialize();
 		JiahaoSpeechBubbleRenderer.initialize();
+		JiahaoDodgeClientController.initialize();
+		JiahaoDodgeKeyBindings.initialize();
 	}
 }

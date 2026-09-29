@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-dodge-smoke",
+  "version": "1.0.0",
+  "environment": "client",
+  "license": "MIT",
+  "entrypoints": {"client": ["com.shouyun.jiahaomode.test.DodgeSmoke"]},
+  "mixins": ["dodge-smoke.mixins.json"],
+  "depends": {"jiahao-mode": "*"}
+}

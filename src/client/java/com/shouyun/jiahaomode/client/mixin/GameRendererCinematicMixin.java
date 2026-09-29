@@ -17,6 +17,7 @@ public abstract class GameRendererCinematicMixin {
     @Inject(method = "renderWorld", at = @At("HEAD"))
     private void jiahao$frame(RenderTickCounter counter, CallbackInfo ci) {
         JiahaoCinematicController.beginFrame(counter.getTickDelta(false));
+        com.shouyun.jiahaomode.client.JiahaoDodgeClientController.beginFrame(counter.getTickDelta(false));
     }
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
     private void jiahao$fov(Camera camera, float delta, boolean changingFov, CallbackInfoReturnable<Double> cir) {
@@ -24,6 +25,8 @@ public abstract class GameRendererCinematicMixin {
             double reduction = 10 * CinematicTimeline.smooth(JiahaoCinematicController.elapsedTicks() / 84)
                     * JiahaoCinematicController.cameraWeight();
             cir.setReturnValue(Math.max(10, cir.getReturnValue() - reduction));
+        } else if (changingFov) {
+            cir.setReturnValue(cir.getReturnValue() + com.shouyun.jiahaomode.client.JiahaoDodgeClientController.fovOffset());
         }
     }
     @Inject(method = {"renderHand", "bobView", "tiltViewWhenHurt"}, at = @At("HEAD"), cancellable = true)

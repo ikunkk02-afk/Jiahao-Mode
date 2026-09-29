@@ -14,7 +14,12 @@
     "EntityCinematicMovementMixin",
     "LivingEntityCinematicMixin",
     "ServerPlayerQuoteDamageMixin",
-    "ServerPlayerQuoteActivityMixin"
+    "ServerPlayerQuoteActivityMixin",
+    "ServerPlayerDodgeMixin",
+    "ServerPlayNetworkHandlerDodgeMixin",
+    "PlayerDodgeLedgeMixin",
+    "DamageCommandDodgeMixin",
+    "ServerPlayerInteractionDodgeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

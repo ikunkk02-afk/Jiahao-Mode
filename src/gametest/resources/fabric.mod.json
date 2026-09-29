@@ -13,7 +13,8 @@
       "com.shouyun.jiahaomode.test.JiahaoTransformationTests",
       "com.shouyun.jiahaomode.test.JiahaoTimeStopTests",
       "com.shouyun.jiahaomode.test.JiahaoCinematicTests",
-      "com.shouyun.jiahaomode.test.JiahaoQuoteTests"
+      "com.shouyun.jiahaomode.test.JiahaoQuoteTests",
+      "com.shouyun.jiahaomode.test.JiahaoDodgeTests"
     ]
   },
   "depends": {

@@ -5,6 +5,7 @@
   "client": ["ClientWorldTimeStopMixin", "WorldRendererTimeAccess", "WorldRendererWeatherTimeStopMixin",
     "WorldWeatherTimeStopMixin", "ParticleTimeStopMixin", "ParticleManagerTimeStopMixin",
     "CameraCinematicMixin", "GameRendererCinematicMixin", "PlayerModelCinematicMixin", "PlayerRenderCinematicMixin",
-    "HudCinematicMixin", "KeyboardCinematicMixin", "MouseCinematicMixin", "ClientActionsCinematicMixin"],
+    "HudCinematicMixin", "KeyboardCinematicMixin", "MouseCinematicMixin", "ClientActionsCinematicMixin",
+    "ClientPlayerDodgeMixin", "ClientDodgeReconciliationMixin", "KeyBindingDodgeMixin"],
   "injectors": { "defaultRequire": 1 }
 }

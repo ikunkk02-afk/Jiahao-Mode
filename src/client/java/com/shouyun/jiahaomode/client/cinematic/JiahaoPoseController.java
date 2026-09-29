@@ -30,11 +30,32 @@ public final class JiahaoPoseController {
         for (int i = 0; i < parts.length; i++) parts[i].setTransform(state[i]);
     }
     public static void apply(PlayerEntityModel<?> model, PlayerEntity player) {
-        if (!JiahaoCinematicController.isPoseActive(player)) return;
+        var dodge = com.shouyun.jiahaomode.client.JiahaoDodgeClientController.visual(player);
+        boolean cinematic = JiahaoCinematicController.isPoseActive(player);
+        if (!cinematic && dodge == null) return;
         ModelPart[] parts = parts(model);
         ModelTransform[] saved = new ModelTransform[parts.length];
         for (int i = 0; i < parts.length; i++) saved[i] = parts[i].getTransform();
         SAVED.put(model, saved);
+        if (!cinematic) {
+            double weight = dodge.weight();
+            double tilt = Math.toRadians(dodge.perfect ? 25 : 17) * weight;
+            model.body.roll += (float)(-dodge.sideways * tilt);
+            model.body.pitch += (float)(dodge.forward * tilt * .6);
+            model.rightArm.roll += (float)(.35 * weight); model.leftArm.roll -= (float)(.35 * weight);
+            model.rightArm.pitch -= (float)(.15 * weight); model.leftArm.pitch -= (float)(.15 * weight);
+            model.head.roll -= (float)(model.body.roll * .35);
+            if (dodge.perfect && dodge.attackPosition != null) {
+                var source = dodge.attackPosition.subtract(player.getPos());
+                double sourceYaw = Math.toDegrees(Math.atan2(-source.x, source.z));
+                float relative = MathHelper.clamp(MathHelper.wrapDegrees((float)sourceYaw - player.bodyYaw), -55, 55);
+                model.head.yaw = (float)CinematicTimeline.lerp(model.head.yaw, Math.toRadians(relative), weight * .55);
+            }
+            model.hat.copyTransform(model.head); model.jacket.copyTransform(model.body);
+            model.rightSleeve.copyTransform(model.rightArm); model.leftSleeve.copyTransform(model.leftArm);
+            model.rightPants.copyTransform(model.rightLeg); model.leftPants.copyTransform(model.leftLeg);
+            return;
+        }
         double time = JiahaoCinematicController.elapsedTicks();
         int from = time < 24 ? 0 : time < 50 ? 0 : time < 72 ? 1 : 2;
         int to = time < 24 ? 0 : from + 1;
