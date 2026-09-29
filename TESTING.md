@@ -426,10 +426,10 @@ Mojang 账号公钥/皮肤资料服务仍有网络警告，和已恢复的依赖
 
 ## 构建及服务端集成测试
 
-- 最终 `gradlew.bat build --console=plain`：`BUILD SUCCESSFUL`；**13 个必需 GameTest 全通过**。
+- 最终 `gradlew.bat build --console=plain`：`BUILD SUCCESSFUL`；**14 个必需 GameTest 全通过**。
 - 原有形态、天气/实体冻结、Cinematic、语录测试与视觉时钟/镜头数学检查保留。
-- 新增 8 个闪避场景：方向/分类、运动/包/冷却/障碍、伤害/行政、空中窗口、真实伤害边界、
-  演出与暂停拥有者/盾牌/死亡、跨维度/退出、冷却/语录/连完美边界。
+- 新增 9 个闪避场景：方向/分类、运动/包/冷却/障碍、伤害/行政、空中窗口、真实伤害边界、
+  演出与暂停拥有者/盾牌/死亡、跨维度/退出、冷却/语录/连完美边界、R 恢复后的真实箭命中。
 - 真正运行 ServerPlayer 的 network handler Tick 和 travel，而非用 setPosition 模拟技能位移。
 
 | 核验 | 实际覆盖 |
@@ -443,6 +443,7 @@ Mojang 账号公钥/皮肤资料服务仍有网络警告，和已恢复的依赖
 | 分类与扩展 | 环境/周期/虚空/行政排除；三叉戟和魔法投射物来源、未知模组近战/投射物来源允许；测试数据包 undodgeable 类型优先拒绝 |
 | 行政 | 实际执行 `/damage @s 2 minecraft:arrow`，健康减少且机会不消费；genericKill 死亡不取消并清除动作 |
 | 使用与暂停 | shield 使用被停止；演出中拒绝 C，独立 server Tick 104 时仍处于暂停但拥有者允许 C |
+| 恢复投射物 | 真实箭在 R 中保持位置/速度，恢复后实际碰撞命中 Tick 0–3，正常消费一次完美机会且生命保持 20 |
 | 清理 | 在动作已经 travel 后真实跨维度，清除旧水平技能速度并保留原版垂直速度；保留冷却，退出清除旧历史 |
 | 语录与连完美 | 首次符合条件必播、字幕到期后仍受 80 Tick 冷却、恰好 80 Tick 可播；60 Tick 内连续成功累加 |
 
@@ -484,7 +485,7 @@ Mojang 账号公钥/皮肤资料服务仍有网络警告，和已恢复的依赖
 | 入口 | 结果 |
 |---|---|
 | `scripts/cinematic-smoke.gradle runClient` | `CINEMATIC SMOKE PASSED`，`BUILD SUCCESSFUL in 1m 45s`；三个视角、镜头/模型、输入、ESC/聊天、再次 R、死亡、维度和断开 |
-| `scripts/weather-visual-smoke.gradle runClient` | `WEATHER VISUAL SMOKE PASSED`，`BUILD SUCCESSFUL in 56s`；真实雨/雪、Fancy 云、天气强度、天空、普通/免疫粒子、暂停/恢复与断开 |
+| `scripts/weather-visual-smoke.gradle runClient` | `WEATHER VISUAL SMOKE PASSED`，`BUILD SUCCESSFUL`；真实雨/雪、Fancy 云、天气强度、天空、普通/免疫粒子、暂停/恢复与断开 |
 | `scripts/quote-smoke.gradle runClient` | 结果 `PASSED`，`BUILD SUCCESSFUL in 53s`；V、电影字幕、语录优先级、生命周期和截图 |
 
 旧服务端测试另覆盖变身、下雨、冻结箭/TNT/生物、计划方块/流体、R 生命周期和恢复。
@@ -502,6 +503,14 @@ Mojang 账号公钥/皮肤资料服务仍有网络警告，和已恢复的依赖
 - 测试客户端按键由原版 KeyBinding API 注入，实际走业务网络和渲染；真实硬件手感、完整动态观感仍需用户体验。
   自定义伤害类型验证兼容规则，未逐个安装第三方战斗模组；本轮没有新增 Iris/ReplayMod/Flashback 兼容验收。
   这些观察边界不被表述成已经完成的人工体验测试。
+
+补充组合测试后发现并修正原有时间暂停的计划 Tick 时间基准：`WorldAccess.createOrderedTick`
+的两个重载原本读取原始 properties 时间，恢复后的新计划 Tick 会多等待已暂停的时间。
+新增 `WorldAccessTimeStopMixin` 明确覆盖两个重载，统一为服务器有效时间；客户端和非服务器
+WorldAccess 保持原值。旧计划 Tick 序列化的 20 Tick 断言保留并重新通过。
+空中测试还显式清空完整飞行通道，避免随机 GameTest 起点与原有随机 Tick 测试的大范围方块重叠。
+闪避夹具显式保持所用区块运行，完成后释放自己新增的强加载；确保原版玩家 Tick、登录保护倒计时
+和投射物模拟正常执行，避免模拟连接没有区块订阅造成的随机免伤。没有跳过原版登录保护或放宽伤害断言。
 
 开发中捕获并修正：默认 C 的原版共享键冲突、网络 Tick 恢复旧位置、测试连接的传送确认，
 时间暂停时 GameTest 时钟停止、重跑存档停在下界、行政伤害测试的 Vanilla PvP 限制、

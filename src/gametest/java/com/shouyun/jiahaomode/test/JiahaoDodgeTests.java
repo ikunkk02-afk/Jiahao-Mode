@@ -52,12 +52,20 @@ public final class JiahaoDodgeTests implements FabricGameTest {
         final JiahaoTransformationTests.TestPlayerConnection actor, observer;
         final ServerPlayerEntity p;
         final Vec3d origin;
+        final List<ChunkPos> forcedChunks=new ArrayList<>();
         Fixture(TestContext c, String name) {
             this.c = c;
             actor = JiahaoTransformationTests.connectTestPlayer(c.getWorld().getServer(), c.getWorld(), name);
             observer = JiahaoTransformationTests.connectTestPlayer(c.getWorld().getServer(), c.getWorld(), name+"B");
             p = actor.player(); p.changeGameMode(GameMode.SURVIVAL);
             var block = c.getAbsolutePos(new BlockPos(2,2,2)); origin = Vec3d.ofBottomCenter(block.up());
+            // Real vanilla player/entity ticks (including login protection) require ticking chunks.
+            var first=new ChunkPos(BlockPos.ofFloored(origin.add(-7,0,-7)));
+            var last=new ChunkPos(BlockPos.ofFloored(origin.add(11,0,7)));
+            for(int x=first.x;x<=last.x;x++)for(int z=first.z;z<=last.z;z++) {
+                var chunk=new ChunkPos(x,z);
+                if(!c.getWorld().getForcedChunks().contains(chunk.toLong())) {c.getWorld().setChunkForced(x,z,true);forcedChunks.add(chunk);}
+            }
             for(int x=-5;x<=5;x++) for(int z=-5;z<=5;z++) {
                 c.getWorld().setBlockState(block.add(x,0,z), Blocks.STONE.getDefaultState());
                 for(int y=1;y<5;y++) c.getWorld().setBlockState(block.add(x,y,z), Blocks.AIR.getDefaultState());
@@ -81,6 +89,7 @@ public final class JiahaoDodgeTests implements FabricGameTest {
             JiahaoDodgeManager.clear(p,true);
             c.getWorld().getServer().getPlayerManager().remove(p); c.getWorld().getServer().getPlayerManager().remove(observer.player());
             actor.channel().finishAndReleaseAll(); observer.channel().finishAndReleaseAll(); c.complete();
+            for(var chunk:forcedChunks)c.getWorld().setChunkForced(chunk.x,chunk.z,false);
         }
         void check(boolean value,String why) { c.assertTrue(value,why); }
     }
@@ -202,6 +211,11 @@ public final class JiahaoDodgeTests implements FabricGameTest {
     public void airborneAndWindowBoundary(TestContext c) {
         var f=new Fixture(c,"DodgeAir"); var p=f.p; JiahaoStateManager.setJiahao(p,true);
         c.waitAndRun(2,()->{
+            // The older random-tick fixture fills an entire adjacent chunk above the ground.
+            // Clear the full flight corridor so randomized GameTest origins cannot put the player inside it.
+            var air=BlockPos.ofFloored(f.origin);
+            for(int x=-2;x<=2;x++)for(int z=-5;z<=5;z++)for(int y=0;y<=34;y++)
+                c.getWorld().setBlockState(air.add(x,y,z),Blocks.AIR.getDefaultState(),2);
             f.reset(); p.setPosition(f.origin.add(0,30,0)); p.networkHandler.syncWithPlayerPosition(); p.setVelocity(0,-.1,0); p.setOnGround(false);
             f.check(JiahaoDodgeManager.startDodge(p,1),"One air dodge allowed");
         });
@@ -317,5 +331,26 @@ public final class JiahaoDodgeTests implements FabricGameTest {
             f.check(JiahaoDodgeManager.getPerfectDodgeCombo(p)==2,"Perfect successes within 60 ticks accumulate");
         });
         c.waitAndRun(104,f::done);
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE,batchId="jiahao_dodge_resumed_projectile",tickLimit=200)
+    public void resumedProjectileUsesNormalPerfectWindow(TestContext c) {
+        var f=new Fixture(c,"DodgeResume");var p=f.p;JiahaoStateManager.setJiahao(p,true);
+        f.check(JiahaoTimeStopManager.startTimeStop(p),"Pause for real projectile-resume scenario");
+        var arrow=new ArrowEntity(EntityType.ARROW,c.getWorld());
+        arrow.setPosition(f.origin.add(0,.8,.1));arrow.setVelocity(0,0,-2.2);c.getWorld().spawnEntity(arrow);
+        Vec3d frozen=arrow.getPos();
+        REAL_TIME_CHECKS.add(new RealTimeCheck(f,JiahaoTimeStopManager.getServerTick(p.getServer()),elapsed -> {
+            if(elapsed==104) {
+                f.check(arrow.getPos().equals(frozen)&&arrow.getVelocity().z==-2.2,"Paused arrow retains position and velocity");
+                f.reset();JiahaoTimeStopManager.stopTimeStop(p);
+                f.check(JiahaoDodgeManager.startDodge(p,0),"C starts immediately after R resumes the world");
+            }
+            if(elapsed==112) {
+                f.check(JiahaoDodgeManager.getPerfectDodgeCombo(p)==1&&p.getHealth()==20,"Resumed real arrow collision consumes the normal perfect window once");
+                f.check(!arrow.getPos().equals(frozen)||arrow.isRemoved(),"Vanilla projectile simulation resumed");
+                c.runAtTick(c.getTick()+1,f::done);return true;
+            }
+            return false;
+        }));
     }
 }

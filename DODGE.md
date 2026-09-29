@@ -109,6 +109,7 @@ try/finally 恢复；因此 `/damage @s 2 minecraft:arrow` 也不能闪避。它
 - `src/main/java/com/shouyun/jiahaomode/dodge/`：Manager、State、NetworkAccess、InteractionAccess。
 - `src/main/java/com/shouyun/jiahaomode/network/`：DodgeNetworking、RequestPayload、StatePayload、PerfectDodgePayload。
 - `src/main/java/com/shouyun/jiahaomode/mixin/`：ServerPlayerDodge、ServerPlayNetworkHandlerDodge、PlayerDodgeLedge、ServerPlayerInteractionDodge、DamageCommandDodge Mixin。
+- `WorldAccessTimeStopMixin`：回归修复，两个计划 Tick 工厂统一使用服务器有效时间，避免 R 恢复后新计划 Tick 延迟偏长。
 - `src/client/java/com/shouyun/jiahaomode/client/`：DodgeKeyBindings、DodgeClientController、DodgeKeyAccess。
 - 客户端 Mixin：ClientPlayerDodge、ClientDodgeReconciliation、KeyBindingDodge。
 - 公共数据资源：`data/jiahao-mode/tags/damage_type/undodgeable.json`。
