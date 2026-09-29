@@ -5,6 +5,7 @@ import net.fabricmc.api.ClientModInitializer;
 public class JiahaoModeClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
+		com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController.initialize();
 		JiahaoTimeClientNetworking.initialize();
 		JiahaoTimeKeyBindings.initialize();
 	}

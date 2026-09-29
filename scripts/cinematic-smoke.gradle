@@ -1,0 +1,29 @@
+// Opt-in real client/renderer checks; isolated world and test-only classes.
+allprojects {
+    afterEvaluate {
+        if (project.hasProperty('cinematicSodium')) {
+            dependencies.add('modRuntimeOnly', files('build/test-mods/sodium-fabric-0.6.13+mc1.21.1.jar'))
+        }
+        def cinematicSmoke = sourceSets.create('cinematicSmoke')
+        cinematicSmoke.java.setSrcDirs(['src/cinematicsmoke/java'])
+        cinematicSmoke.resources.setSrcDirs(['src/cinematicsmoke/resources'])
+        cinematicSmoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        cinematicSmoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-cinematic-smoke') { sourceSet cinematicSmoke }
+        loom.runs.client {
+            runDir 'build/run/cinematicSmoke'
+            programArgs '--quickPlaySingleplayer', 'CinematicSmoke', '--width', '1280', '--height', '720'
+        }
+        def smokeResult = project.file('build/run/cinematicSmoke/cinematic-smoke-result.txt')
+        tasks.named('runClient') {
+            dependsOn tasks.named('cinematicSmokeClasses')
+            classpath += cinematicSmoke.output
+            doFirst { java.nio.file.Files.deleteIfExists(smokeResult.toPath()) }
+            doLast {
+                if (!smokeResult.exists() || smokeResult.text.trim() != 'PASSED') {
+                    throw new GradleException('Cinematic client assertions failed; inspect cinematic-smoke-result.txt and the client log')
+                }
+            }
+        }
+    }
+}

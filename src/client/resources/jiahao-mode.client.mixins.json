@@ -3,6 +3,8 @@
   "package": "com.shouyun.jiahaomode.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": ["ClientWorldTimeStopMixin", "WorldRendererTimeAccess", "WorldRendererWeatherTimeStopMixin",
-    "WorldWeatherTimeStopMixin", "ParticleTimeStopMixin", "ParticleManagerTimeStopMixin"],
+    "WorldWeatherTimeStopMixin", "ParticleTimeStopMixin", "ParticleManagerTimeStopMixin",
+    "CameraCinematicMixin", "GameRendererCinematicMixin", "PlayerModelCinematicMixin", "PlayerRenderCinematicMixin",
+    "HudCinematicMixin", "KeyboardCinematicMixin", "MouseCinematicMixin", "ClientActionsCinematicMixin"],
   "injectors": { "defaultRequire": 1 }
 }

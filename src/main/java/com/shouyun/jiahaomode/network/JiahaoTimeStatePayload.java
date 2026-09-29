@@ -7,16 +7,19 @@ import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 import java.util.UUID;
+import net.minecraft.util.math.Vec3d;
 
 public record JiahaoTimeStatePayload(Identifier dimension, boolean active, UUID owner,
-		int remainingTicks, long gameTime, long dayTime) implements CustomPayload {
+		int remainingTicks, long gameTime, long dayTime, UUID session, int elapsedTicks,
+		boolean cinematic, Vec3d origin, float yaw) implements CustomPayload {
 	public static final Id<JiahaoTimeStatePayload> ID = new Id<>(JiahaoMode.id("time_state"));
 	public static final PacketCodec<RegistryByteBuf, JiahaoTimeStatePayload> CODEC = new PacketCodec<>() {
 		@Override public JiahaoTimeStatePayload decode(RegistryByteBuf buf) {
 			Identifier dimension = buf.readIdentifier();
 			boolean active = buf.readBoolean();
 			return new JiahaoTimeStatePayload(dimension, active, active ? buf.readUuid() : null,
-					buf.readVarInt(), buf.readLong(), buf.readLong());
+					buf.readVarInt(), buf.readLong(), buf.readLong(), buf.readUuid(), buf.readVarInt(),
+					buf.readBoolean(), new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble()), buf.readFloat());
 		}
 		@Override public void encode(RegistryByteBuf buf, JiahaoTimeStatePayload payload) {
 			buf.writeIdentifier(payload.dimension());
@@ -25,6 +28,11 @@ public record JiahaoTimeStatePayload(Identifier dimension, boolean active, UUID 
 			buf.writeVarInt(payload.remainingTicks());
 			buf.writeLong(payload.gameTime());
 			buf.writeLong(payload.dayTime());
+			buf.writeUuid(payload.session());
+			buf.writeVarInt(payload.elapsedTicks());
+			buf.writeBoolean(payload.cinematic());
+			buf.writeDouble(payload.origin().x); buf.writeDouble(payload.origin().y); buf.writeDouble(payload.origin().z);
+			buf.writeFloat(payload.yaw());
 		}
 	};
 	@Override public Id<? extends CustomPayload> getId() { return ID; }

@@ -10,7 +10,9 @@
     "ChunkSerializerTimeStopMixin",
     "ServerPlayerTimeStopMixin",
     "ServerPlayNetworkHandlerTimeStopMixin",
-    "EntityPushTimeStopMixin"
+    "EntityPushTimeStopMixin",
+    "EntityCinematicMovementMixin",
+    "LivingEntityCinematicMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }

@@ -9,7 +9,8 @@
     "main": ["com.shouyun.jiahaomode.test.JiahaoTimeTestBlocks"],
     "fabric-gametest": [
       "com.shouyun.jiahaomode.test.JiahaoTransformationTests",
-      "com.shouyun.jiahaomode.test.JiahaoTimeStopTests"
+      "com.shouyun.jiahaomode.test.JiahaoTimeStopTests",
+      "com.shouyun.jiahaomode.test.JiahaoCinematicTests"
     ]
   },
   "depends": {

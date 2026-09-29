@@ -343,7 +343,8 @@ public final class JiahaoTimeStopTests implements FabricGameTest {
 			return -1;
 		}
 		void codecRoundTrip() {
-			var original = new JiahaoTimeStatePayload(world.getRegistryKey().getValue(), true, owner.getUuid(), 160, frozenTime, frozenDay);
+			var original = new JiahaoTimeStatePayload(world.getRegistryKey().getValue(), true, owner.getUuid(), 160, frozenTime, frozenDay,
+					UUID.randomUUID(), 0, true, owner.getPos(), owner.getYaw());
 			RegistryByteBuf buf = new RegistryByteBuf(Unpooled.buffer(), server.getRegistryManager());
 			try { JiahaoTimeStatePayload.CODEC.encode(buf, original); check(JiahaoTimeStatePayload.CODEC.decode(buf).equals(original), "S2C codec round trip"); }
 			finally { buf.release(); }

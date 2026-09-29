@@ -38,6 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class JiahaoTimeStopManager {
 	public static final int MAX_DURATION_TICKS = 160;
 	public static final int COOLDOWN_TICKS = 60;
+	public static final int CINEMATIC_TICKS = 100;
+	private static final UUID NO_SESSION = new UUID(0, 0);
 	private static final Map<MinecraftServer, ServerRuntime> SERVERS = Collections.synchronizedMap(new WeakHashMap<>());
 
 	private JiahaoTimeStopManager() { }
@@ -97,6 +99,23 @@ public final class JiahaoTimeStopManager {
 				: (int) Math.max(0, dimension.active.endTick - runtime(world.getServer()).tick);
 	}
 	public static long getServerTick(MinecraftServer server) { return runtime(server).tick; }
+	public static boolean isCinematicLocked(Entity entity) {
+		if (entity.getWorld() instanceof ServerWorld world) {
+			DimensionRuntime dimension = dimensionOrNull(world);
+			TimeStopState state = dimension == null ? null : dimension.active;
+			return state != null && state.cinematic && state.owner.equals(entity.getUuid())
+					&& getServerTick(world.getServer()) - state.startTick < CINEMATIC_TICKS;
+		}
+		JiahaoTimeView view = entity.getWorld().getAttachedOrElse(JiahaoTimeView.CLIENT_VIEW, JiahaoTimeView.INACTIVE);
+		return view.active() && view.cinematicLocked() && entity.getUuid().equals(view.owner());
+	}
+	public static boolean isStableForCinematic(ServerPlayerEntity player) {
+		return player.isAlive() && !player.isRemoved() && player.isOnGround() && !player.hasVehicle()
+				&& player.getPose() == net.minecraft.entity.EntityPose.STANDING && !player.isTouchingWater()
+				&& !player.isInLava() && !player.isFallFlying() && !player.getAbilities().flying && !player.isSpectator()
+				&& Math.abs(player.getVelocity().y) < 0.12
+				&& !player.getWorld().isSpaceEmpty(player, player.getBoundingBox().offset(0, -0.05, 0));
+	}
 
 	public static boolean startTimeStop(ServerPlayerEntity player) {
 		ServerWorld world = player.getServerWorld();
@@ -118,7 +137,13 @@ public final class JiahaoTimeStopManager {
 		}
 		player.stopRiding();
 		dimension.active = new TimeStopState(player.getUuid(), runtime.tick, runtime.tick + MAX_DURATION_TICKS,
-				world.getTime(), world.getTimeOfDay());
+				world.getTime(), world.getTimeOfDay(), isStableForCinematic(player), player.getPos(), player.getYaw());
+		if (dimension.active.cinematic) {
+			player.setVelocity(Vec3d.ZERO); player.velocityModified = true;
+			player.stopUsingItem(); player.setSprinting(false);
+			// One initial reconciliation, never a per-tick teleport loop.
+			player.networkHandler.requestTeleport(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch());
+		}
 		for (ServerPlayerEntity other : world.getPlayers()) {
 			if (shouldFreeze(other)) lockPlayer(other, dimension);
 			message(other, "started");
@@ -184,6 +209,12 @@ public final class JiahaoTimeStopManager {
 			} else if (runtime.tick >= active.endTick) {
 				stop(world, "duration elapsed");
 			} else {
+				if (active.cinematic && (runtime.tick - active.startTick >= CINEMATIC_TICKS
+						|| !isStableForCinematic(owner) || owner.getPos().squaredDistanceTo(active.origin) > 0.0025)) {
+					active.cinematic = false;
+					syncWorld(world);
+				}
+				if (active.cinematic) owner.setVelocity(Vec3d.ZERO);
 				for (ServerPlayerEntity player : world.getPlayers()) if (shouldFreeze(player)) lockPlayer(player, entry.getValue());
 				if ((runtime.tick - active.startTick) % 20 == 0) syncWorld(world);
 			}
@@ -225,8 +256,13 @@ public final class JiahaoTimeStopManager {
 		ServerWorld world = player.getServerWorld();
 		if (shouldFreeze(player)) lockPlayer(player, dimensionOrNull(world));
 		if (ServerPlayNetworking.canSend(player, JiahaoTimeStatePayload.ID)) {
+			DimensionRuntime dimension = dimensionOrNull(world);
+			TimeStopState state = dimension == null ? null : dimension.active;
 			ServerPlayNetworking.send(player, new JiahaoTimeStatePayload(world.getRegistryKey().getValue(), isTimeStopped(world),
-					getOwner(world), getRemainingTicks(world), world.getTime(), world.getTimeOfDay()));
+					getOwner(world), getRemainingTicks(world), world.getTime(), world.getTimeOfDay(),
+					state == null ? NO_SESSION : state.session,
+					state == null ? 0 : (int) (getServerTick(world.getServer()) - state.startTick),
+					state != null && state.cinematic, state == null ? Vec3d.ZERO : state.origin, state == null ? 0 : state.yaw));
 		}
 		player.networkHandler.sendPacket(new WorldTimeUpdateS2CPacket(world.getTime(), world.getTimeOfDay(),
 				world.getGameRules().getBoolean(net.minecraft.world.GameRules.DO_DAYLIGHT_CYCLE)));
@@ -258,7 +294,17 @@ public final class JiahaoTimeStopManager {
 		volatile long dayOffset;
 		final Map<UUID, FrozenPlayer> players = new HashMap<>();
 	}
-	private record TimeStopState(UUID owner, long startTick, long endTick, long gameTime, long dayTime) { }
+	private static final class TimeStopState {
+		final UUID owner, session = UUID.randomUUID();
+		final long startTick, endTick, gameTime, dayTime;
+		final Vec3d origin;
+		final float yaw;
+		boolean cinematic;
+		TimeStopState(UUID owner, long startTick, long endTick, long gameTime, long dayTime, boolean cinematic, Vec3d origin, float yaw) {
+			this.owner = owner; this.startTick = startTick; this.endTick = endTick;
+			this.gameTime = gameTime; this.dayTime = dayTime; this.cinematic = cinematic; this.origin = origin; this.yaw = yaw;
+		}
+	}
 	public static final class FrozenPlayer {
 		public final Vec3d position;
 		public final float yaw;

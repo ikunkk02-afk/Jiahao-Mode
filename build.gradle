@@ -81,6 +81,12 @@ tasks.register('runVisualClockTests', JavaExec) {
 	mainClass = 'com.shouyun.jiahaomode.test.FrozenRenderClockTests'
 }
 tasks.named('check') { dependsOn tasks.named('runVisualClockTests') }
+tasks.register('runCinematicTests', JavaExec) {
+	dependsOn tasks.named('visualtestClasses')
+	classpath = sourceSets.visualtest.runtimeClasspath
+	mainClass = 'com.shouyun.jiahaomode.test.CinematicTimelineTests'
+}
+tasks.named('check') { dependsOn tasks.named('runCinematicTests') }
 
 jar {
 	def projectName = project.name

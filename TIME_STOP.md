@@ -3,6 +3,10 @@
 Minecraft 1.21.1，Yarn 1.21.1+build.3，Fabric API 0.116.17+1.21.1。
 没有升级依赖。包为 `com.shouyun.jiahaomode`，Mod ID 为 `jiahao-mode`。
 
+第三阶段已在原系统上接入约 5 秒 Camera/Pose 演出，完整说明见 [CINEMATIC.md](CINEMATIC.md)。
+稳定站立的拥有者前 100 Tick 额外锁定位移与交互，之后恢复自由操作；暂停仍持续最多 160 Tick。
+空中等不稳定情况下直接跳过演出，保留原暂停行为。下文文件表记录第二阶段基础实现。
+
 ## 文件变更
 
 下列 Java 路径均位于对应源集的 `com/shouyun/jiahaomode/` 下。
@@ -35,7 +39,8 @@ KEYSYM 类型的 GLFW R 默认键。已有客户端入口调用它；`wasPressed
 拥有者再次请求会结束；其他玩家无法覆盖拥有者。
 
 S2C `JiahaoTimeStatePayload` 的 ID 为 `jiahao-mode:time_state`，包含维度 ID、active、
-拥有者 UUID、剩余 Tick、逻辑游戏时间及 Day Time。开始、结束、加入、频道注册及换维度
+拥有者 UUID、剩余 Tick、逻辑游戏时间及 Day Time。第三阶段在同一个包追加会话 UUID、
+经过 Tick、演出启用标志、演出原点及朝向；两端必须使用相同构建。开始、结束、加入、频道注册及换维度
 同步，暂停期间每 20 Tick 刷新。`JiahaoTimeClientNetworking` 只接受当前维度快照，
 写入非持久化的世界附件 `time_stop_view` 并校准时间。共用查询不引用客户端类。
 
@@ -88,7 +93,8 @@ S2C `JiahaoTimeStatePayload` 的 ID 为 `jiahao-mode:time_state`，包含维度 
 `client.visual.JiahaoTimeStopClientState` 是现有权威状态的视觉快照，不是第二套技能系统。
 同维度 S2C 首次 active 时记录最近显示帧的动画时间、插值比例、雨量和原始雷暴强度；
 每 20 Tick 的重复 active 同步不会重新拍快照。结束时释放；换 ClientWorld 或断线时清理。
-世界仅通过弱引用绑定。网络包格式、R 键、服务端管理器和形态 API 均保持不变。
+天气快照的世界仅通过弱引用绑定。天气视觉阶段没有修改网络格式；第三阶段追加的演出字段
+仍经由同一 S2C 接收器分发。R 键和形态 API 保持不变，换世界同时清理电影演出。
 
 `FrozenRenderClock` 保存冻结时刻和累计时间偏移。暂停期间始终返回同一个整数 Tick 和
 小数 Tick；雨雪的纹理滚动和随机列动画、云的世界空间漂移均使用这组参数。

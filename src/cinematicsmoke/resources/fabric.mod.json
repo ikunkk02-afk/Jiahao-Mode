@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-cinematic-smoke",
+  "version": "1.0.0",
+  "name": "Isolated Jiahao Cinematic Checks",
+  "environment": "client",
+  "license": "MIT",
+  "entrypoints": {"client": ["com.shouyun.jiahaomode.test.CinematicSmoke"]},
+  "depends": {"jiahao-mode": "*", "fabric-api": "*"}
+}

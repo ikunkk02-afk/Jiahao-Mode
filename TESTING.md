@@ -1,5 +1,7 @@
 # 第一阶段验证记录
 
+最新的第三阶段电影演出验证位于本文末尾；上方第一、二阶段条目保留历史验证范围。
+
 验证日期：2026-09-28。Minecraft 1.21.1 / Yarn 1.21.1+build.3 /
 Fabric Loader 0.19.5 / Fabric API 0.116.17+1.21.1。
 
@@ -243,3 +245,95 @@ Java 编译没有新增 warning，真实客户端和 Dedicated Server 没有 Mix
 仍有 JDK 25 的 JNA/Unsafe/LWJGL 警告、原版 shader sampler/山羊音效提示、
 Mojang 公钥请求超时及本地 offline-mode 提示；它们未阻止构建、测试或正常保存退出。
 发布 JAR 只含业务代码/资源，测试类、测试模组资源、存档、日志、缓存均不提交或打包。
+
+# 第三阶段：电影演出验证记录
+
+验证日期：2026-09-29。沿用 Minecraft 1.21.1 / Yarn 1.21.1+build.3 / Fabric 0.116.17+1.21.1，
+没有新增业务依赖。实现、协议和完整文件清单见 [CINEMATIC.md](CINEMATIC.md)。
+
+## 构建与服务端测试
+
+- 最终 `gradlew.bat build --console=plain`：`BUILD SUCCESSFUL`，4 个必需 GameTest 全部通过。
+- `runCinematicTests`：轨道端点、半径/高度边界、easing 连续性、30/60/180 FPS 逐帧采样、
+  重复/旧快照不倒退、晚加入、网络卡顿外推限制及有界校正通过。
+- 新增服务器场景验证：稳定站立启动、残留速度清空、真实 move/jump/移动包均被锁定、
+  100 Tick 只解除演出、160 Tick 才恢复世界、空中仍可暂停但不演出、落地不补播、
+  外部位移仅取消演出、再次 R、死亡及实际跨维度传送清理。
+- 40 Tick 时接入另一个真实 ServerPlayer 及内存网络连接，通过原有频道注册接收 S2C，
+  验证相同 session/owner/origin 和 elapsedTicks=40，证明晚加入同步复用现有消息。
+- 原变身、冷却、不同维度、箭/TNT/生物/掉落物、计划方块和流体更新、序列化、天气 Timer、
+  原版生命周期与关闭 canary 均保留并通过。原暂停测试使用无演出的场景，保留原拥有者移动/伤害断言；
+  新演出测试另外覆盖前 100 Tick 锁定及之后恢复，没有删除原来的断言。
+- 新 S2C codec 往返包括新增会话、进度、原点和方向字段。
+
+## 真实客户端与 Sodium
+
+在隔离存档实际执行 `gradlew.bat --no-configuration-cache -I scripts/cinematic-smoke.gradle runClient`，
+最终日志为 `CINEMATIC SMOKE PASSED`，结果文件内容 `PASSED`，Gradle `BUILD SUCCESSFUL`。
+随后/另行通过同一套测试验证 Sodium，显式加 `-PcinematicSodium`，不进入默认依赖。
+Sodium 版本为官方 Fabric 1.21.1 的 0.6.13，下载后核对 SHA-512，来源及哈希见实现文档。
+
+实际覆盖：
+
+| 场景 | 自动检查 |
+|---|---|
+| 第一人称、第三人称后视、第三人称前视 | 每种完整走原 C2S/S2C、Camera 更新和实体渲染，原 Perspective/FOV 设置保持；5 秒左右结束时暂停仍在 |
+| 高帧率 | 限帧 180，最终 Vanilla 的完整轨道采样分别有 638/639/642 个移动帧；纯数学测试另覆盖 30/60/180 FPS |
+| LookAt | 正式轨道每帧相机前向量与上半身目标向量点积 > 0.9999 |
+| 碰撞 | 墙边场景每帧检测 target→camera 射线没有越过方块，实际输出墙边截图 |
+| 雨景冻结 | Camera 移动期间天气视觉时钟每帧保持同一值；测试位置生物群系设为 plains，画面确实有雨 |
+| 输入 | 实际按键状态注入 W/跳跃，检查输入清零和实体位置稳定；释放后不留锁 |
+| ESC | 实际打开 GameMenuScreen，确认集成服务器真正暂停，暂停期间演出进度保持，关闭后继续 |
+| 聊天 | 演出期间实际打开和关闭 ChatScreen，序列继续且不丢原视角 |
+| 再次 R | 发送原 C2S，服务器结束暂停，客户端走短退场，无持续相机/输入覆盖 |
+| 死亡 | 真正调用服务器死亡流程，客户端退出演出，之后请求原版重生 |
+| 换维度 | 真实 Overworld→Nether，原维度暂停与客户端演出清理，之后返回继续测试 |
+| 断开 | 演出中真实断开并保存退出，Camera/Input 活跃标志清零 |
+| 远程 Pose | 客户端用远程玩家模型和晚到快照验证仅 Pose 生效、镜头/输入无覆盖，袖子/护甲复制变换、结束后原版姿势恢复 |
+| Sodium | 0.6.13 完整重复上述七轮生命周期场景，通过；没有 Class/Mixin 注入错误 |
+
+本轮还实际启动独立 Dedicated Server，监听本机临时端口，达到 `Done` 后发送 `stop`，
+三个维度保存完成，任务 `BUILD SUCCESSFUL`。隔离目录为 `build/run/cinematicDedicated`。
+
+截图使用游戏自身 ScreenshotRecorder 从 framebuffer 生成，已检查四段姿态和最终近景，
+并据实际截图将最终手臂从遮脸位置下调到下巴附近。截图也证明人物可见、无准星、
+上下黑边与物品栏共存。没有替换玩家皮肤，截图中的形象是测试账号的默认皮肤。
+
+## 人工验收边界
+
+- 数值每帧检查和静态截图已完成；完整动态镜头的观感、真实鼠标/键盘手感和 180 Hz 屏幕表现仍需人工体验。
+- 已有真实服务器旁观者连接同步检查和真实客户端远程模型检查，但没有同时操作两个真实游戏窗口完成视觉验收。
+- 16:9 的真实截图已检查；16:10、21:9 采用相同屏幕比例计算，仍需人工确认黑边/HUD 布局。
+- 普通/纤细模型共用字段并保留原支点；各种装备与走路、游泳、骑乘、滑翔的全组合视觉矩阵未逐一人工观察。
+- 极狭窄空间优先不穿墙，可能无法形成完整人物构图；没有宣称支持 Iris Shader Camera、ReplayMod 或 Flashback。
+- 用户期望的雨滴、箭和怪物同屏定格场面：本轮雨景与 Camera 同屏截图、既有箭/怪物服务端测试均通过，完整场景观感仍需人工验收。
+
+## 调试过程与日志
+
+首轮新增 GameTest 的完成回调在测试 Tick 外执行，导致批次等待；改为在 GameTest Tick 内
+报告完成后通过。首轮客户端测试误把“提前结束后的短退场”也断言为世界仍冻结；修正了该测试
+条件，业务提前取消逻辑未因此更改。客户端测试脚本增加结果文件检查，不能用 Gradle 启动成功
+掩盖业务断言失败。最终测试脚本也移除了执行阶段读取 Task.project 的 Gradle 弃用用法。
+
+保留的环境提示包括 JDK 25 JNA/Unsafe、LWJGL、Mojang 公钥或账号资料连接失败，
+以及原版资源警告；没有把外部认证服务连接问题写成业务测试失败。
+
+主要本地证据（均在忽略的 build/ 内，不提交）：
+
+- `build/cinematic-build.log`
+- `build/cinematic-client.log`
+- `build/cinematic-sodium.log` 与 `build/cinematic-sodium-result.txt`
+- `build/run/cinematicSmoke/cinematic-smoke-result.txt`
+- `build/run/cinematicSmoke/screenshots/cinematic-*-pose-*.png`
+- `build/run/cinematicDedicated/logs/latest.log`
+
+所有业务源码、测试源码和文档可提交；测试存档、截图、日志、第三方测试 JAR、build/run/.gradle
+均不提交，测试类不加入发布 JAR。
+
+## 最终天气回归
+
+最终业务代码上重新运行原有 `scripts/weather-visual-smoke.gradle runClient`，日志为
+`WEATHER VISUAL SMOKE PASSED`，任务 `BUILD SUCCESSFUL in 59s`。实际雨/雪生物群系、
+Fancy 云时钟、天气强度、天空、普通/免疫粒子、8 秒自动恢复及断开清理全部通过。
+日志为 `build/cinematic-weather-regression.log`。电影测试脚本最后的弃用 API 清理另经
+`runClient --dry-run --warning-mode=all` 验证配置成功，无需重复业务演出断言。

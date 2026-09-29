@@ -30,13 +30,14 @@ public abstract class ServerPlayNetworkHandlerTimeStopMixin {
 
 	@Inject(method = "tick", at = @At("HEAD"))
 	private void jiahao$keepConnectionAlive(CallbackInfo ci) {
-		if (JiahaoTimeStopManager.shouldFreeze(player)) {
+		if (JiahaoTimeStopManager.shouldFreeze(player) || JiahaoTimeStopManager.isCinematicLocked(player)) {
 			floating = false; floatingTicks = 0; vehicleFloating = false; vehicleFloatingTicks = 0;
 		}
 	}
 	@Inject(method = "onPlayerMove", at = @At(value = "INVOKE", target = JIAHAO_MAIN_THREAD, shift = At.Shift.AFTER), cancellable = true)
 	private void jiahao$lockMovement(PlayerMoveC2SPacket packet, CallbackInfo ci) {
-		if (!JiahaoTimeStopManager.shouldFreeze(player)) return;
+		if (!JiahaoTimeStopManager.shouldFreeze(player) && !JiahaoTimeStopManager.isCinematicLocked(player)) return;
+		if (JiahaoTimeStopManager.isCinematicLocked(player)) { ci.cancel(); return; }
 		if (requestedTeleportPos == null) {
 			var lock = JiahaoTimeStopManager.movementCorrection(player);
 			if (lock != null) player.networkHandler.requestTeleport(lock.position.x, lock.position.y, lock.position.z, lock.yaw, lock.pitch);
@@ -45,7 +46,7 @@ public abstract class ServerPlayNetworkHandlerTimeStopMixin {
 	}
 	@Inject(method = "onPlayerAction", at = @At(value = "INVOKE", target = JIAHAO_MAIN_THREAD, shift = At.Shift.AFTER), cancellable = true)
 	private void jiahao$actions(PlayerActionC2SPacket packet, CallbackInfo ci) {
-		if (!JiahaoTimeStopManager.shouldFreeze(player)) return;
+		if (!JiahaoTimeStopManager.shouldFreeze(player) && !JiahaoTimeStopManager.isCinematicLocked(player)) return;
 		player.networkHandler.updateSequence(packet.getSequence());
 		player.networkHandler.sendPacket(new BlockUpdateS2CPacket(player.getServerWorld(), packet.getPos()));
 		player.currentScreenHandler.syncState();
@@ -53,7 +54,7 @@ public abstract class ServerPlayNetworkHandlerTimeStopMixin {
 	}
 	@Inject(method = "onPlayerInteractBlock", at = @At(value = "INVOKE", target = JIAHAO_MAIN_THREAD, shift = At.Shift.AFTER), cancellable = true)
 	private void jiahao$useBlock(PlayerInteractBlockC2SPacket packet, CallbackInfo ci) {
-		if (!JiahaoTimeStopManager.shouldFreeze(player)) return;
+		if (!JiahaoTimeStopManager.shouldFreeze(player) && !JiahaoTimeStopManager.isCinematicLocked(player)) return;
 		player.networkHandler.updateSequence(packet.getSequence());
 		var hit = packet.getBlockHitResult();
 		player.networkHandler.sendPacket(new BlockUpdateS2CPacket(player.getServerWorld(), hit.getBlockPos()));
@@ -63,7 +64,7 @@ public abstract class ServerPlayNetworkHandlerTimeStopMixin {
 	}
 	@Inject(method = "onPlayerInteractItem", at = @At(value = "INVOKE", target = JIAHAO_MAIN_THREAD, shift = At.Shift.AFTER), cancellable = true)
 	private void jiahao$useItem(PlayerInteractItemC2SPacket packet, CallbackInfo ci) {
-		if (!JiahaoTimeStopManager.shouldFreeze(player)) return;
+		if (!JiahaoTimeStopManager.shouldFreeze(player) && !JiahaoTimeStopManager.isCinematicLocked(player)) return;
 		player.networkHandler.updateSequence(packet.getSequence());
 		player.currentScreenHandler.syncState();
 		ci.cancel();
@@ -77,5 +78,10 @@ public abstract class ServerPlayNetworkHandlerTimeStopMixin {
 			player.currentScreenHandler.syncState();
 			ci.cancel();
 		}
+	}
+	@Inject(method = {"onPlayerInteractEntity", "onPlayerInput", "onClientCommand"},
+			at = @At(value = "INVOKE", target = JIAHAO_MAIN_THREAD, shift = At.Shift.AFTER), cancellable = true)
+	private void jiahao$cinematicActions(CallbackInfo ci) {
+		if (JiahaoTimeStopManager.isCinematicLocked(player)) ci.cancel();
 	}
 }

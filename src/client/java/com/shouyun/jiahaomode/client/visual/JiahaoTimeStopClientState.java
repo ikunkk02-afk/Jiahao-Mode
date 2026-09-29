@@ -22,6 +22,7 @@ public final class JiahaoTimeStopClientState {
 	private JiahaoTimeStopClientState() { }
 	public static void onWorldChanged(ClientWorld world) {
 		if (currentWorld.get() == world) return;
+		com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController.cleanup();
 		currentWorld = new WeakReference<>(world);
 		CLOCK.reset(); lastFrameTime = Double.NaN; lastFrameDelta = 0; frozenFrameDelta = 0;
 	}

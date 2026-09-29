@@ -18,6 +18,7 @@ public final class JiahaoTimeClientNetworking {
 			world.setAttached(JiahaoTimeView.CLIENT_VIEW, new JiahaoTimeView(payload.active(), payload.owner(), payload.remainingTicks()));
 			world.setTime(payload.gameTime());
 			world.setTimeOfDay(payload.dayTime());
+			com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController.onStateSync(world, payload);
 		});
 	}
 }
