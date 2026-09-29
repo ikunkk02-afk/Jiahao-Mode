@@ -109,3 +109,9 @@ Jiahao Mode is licensed under the MIT license; see [LICENSE](LICENSE).
 The initial project was created with the Fabric Template Generator. The Fabric
 template is distributed under CC0; its original license is preserved in
 [LICENSE-FABRIC-TEMPLATE](LICENSE-FABRIC-TEMPLATE).
+
+## 第四阶段：嘉豪语录
+
+嘉豪形态下按 **V** 随机说话（可改键，2.5 秒冷却）。进入形态约 1 秒后自动说话；嘉豪时刻正面特写在进度 0.74 出现“世界，安静一点。”。本人看电影字幕，附近玩家看头顶文字。文本支持中英文，本阶段无新增语音。
+
+实现、扩展方式和测试入口见 [QUOTES.md](QUOTES.md)，实际验证记录见 [TESTING.md](TESTING.md)。

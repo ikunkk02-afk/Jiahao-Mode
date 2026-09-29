@@ -337,3 +337,76 @@ Sodium 版本为官方 Fabric 1.21.1 的 0.6.13，下载后核对 SHA-512，来�
 Fancy 云时钟、天气强度、天空、普通/免疫粒子、8 秒自动恢复及断开清理全部通过。
 日志为 `build/cinematic-weather-regression.log`。电影测试脚本最后的弃用 API 清理另经
 `runClient --dry-run --warning-mode=all` 验证配置成功，无需重复业务演出断言。
+
+# 第四阶段：嘉豪语录验证记录
+
+日期：2026-09-29。实现与新增文件清单见 [QUOTES.md](QUOTES.md)。Minecraft、Fabric、Yarn、Java 编译目标与原配置一致。
+
+## 已完成验证
+
+| 项目 | 实际结果 |
+| --- | --- |
+| `gradlew.bat build --console=plain` | `BUILD SUCCESSFUL in 22s`；5 个服务器 GameTest 全通过，既有天气时钟、镜头数学测试通过 |
+| 语录真实客户端 | `gradlew.bat -I scripts/quote-smoke.gradle runClient --console=plain`，`BUILD SUCCESSFUL in 51s`，结果文件 `PASSED`；实际进入隔离世界并保存退出 |
+| Cinematic / Pose 回归 | 原有 cinematic-smoke 启动，`BUILD SUCCESSFUL in 1m 58s`、`CINEMATIC SMOKE PASSED`；全部视角、提前结束、死亡、维度切换与退出场景通过 |
+| 天气回归 | 最终源码编译产物的真实客户端运行：`WEATHER VISUAL SMOKE PASSED`，退出码 0；雨雪、Fancy 云时钟、天气强度、天空、粒子、8 秒恢复、断线清理通过 |
+| Dedicated Server | 最终公共代码实际到达 `Done (1.030s)`，发送 stop，三个维度保存退出，退出码 0 |
+| 发布 JAR | 37 个中英文语录键对应一致；JAR 不含测试类和 quote-smoke 资源 |
+| Git 内容检查 | 无 build、run、.gradle、日志、崩溃报告、截图和测试存档进入提交 |
+
+## 用户 20 项测试的证据范围
+
+| 测试 | 证据 |
+| --- | --- |
+| 1 普通状态请求 | GameTest 与真实客户端发送空 C2S，服务器不发语录；V 注册及客户端形态过滤代码检查 |
+| 2 延迟变身 | 20 Tick 前不发送、随后发送一次；真实客户端收到 TRANSFORM |
+| 3 连续变身解除 | 服务端取消预约、客户端无残留；保留手动冷却 |
+| 4 手动随机 | 真实 C2S/S2C 收到 MANUAL，并截图 |
+| 5 狂按冷却 | 服务端同 Tick 100 次请求拒绝；客户端 30 次连发不重启字幕；49/50 Tick 边界 |
+| 6 不连续重复 | 多类别确定性选择测试及真实客户端连续两次 Manual ID 不同 |
+| 7 时间暂停 | 原有真实电影测试全通过 |
+| 8 正面字幕 | 真正时间暂停中 Progress >= 0.74 后收到并显示固定招牌句，截图确认 |
+| 9 一次演出一次 | 服务端 session 调度断言，客户端同一次显示开始时间不重置 |
+| 10 结束冲突 | 服务器结束事件等待高优先级语录和间隔；实际客户端结束字幕到期清理 |
+| 11 低血一次 | 同一次低血阶段只发一次 |
+| 12 低血重置 | 恰好 50% 不重置，严格高于 50% 后再次低血可重发 |
+| 13 敌对击杀 | 真实创建僵尸并以玩家伤害击杀；固定随机种子验证成功，失败概率分支另有断言 |
+| 14 普通状态击杀 | 非嘉豪击杀回调不发语录；盔甲架/牛死亡事件不触发 |
+| 15 附近头顶 | 服务端内存连接验证 64 格包含、65 格及其他维度排除；客户端渲染真实 OtherClientPlayerEntity 头顶文字并截图 |
+| 16 旁观者无字幕 | 远端 UUID 消息不会进入 local subtitle；不同 UUID 分开保存 |
+| 17 淡入淡出 | 真实渲染帧采样 0.15 秒淡入、最后 0.25 秒淡出，数学端点验证 |
+| 18 冻结期间动画 | 字幕年龄、透明度在世界冻结时正常推进，电影语录实际在冻结期间绘制 |
+| 19 换维度清理 | 服务器取消并保留冷却；客户端实际主世界到下界后旧显示清空；错误维度消息拒绝 |
+| 20 退出清理 | 真正 disconnect 后客户端有效语录为空 |
+
+另测：伤害阈值、18%/20% 成功失败概率分支、真实小伤害经过 Mixin 不误触发、30 秒 IDLE 边界、无效演出 session、重复回退、未知 Quote ID 与旧事件拒绝。概率分支采用预先找到并重置的随机种子，不靠重复运行碰概率。
+
+## 视觉核对与人工边界
+
+已查看最终 framebuffer 截图：中文电影字幕位于快捷栏上方、黑边之外；头顶文字带深色底、朝向摄像机，与玩家名分开。使用游戏自身 ScreenshotRecorder 在整帧结束采集。
+
+多人网络断言使用真实服务器玩家和内存连接，头顶渲染使用真实客户端中的远端玩家实体。**未启动两个人工操作的独立客户端联机**，不声称完成该项人工验收。仍建议人工检查双客户端观感、改键、不同 GUI 缩放及资源包/Shader 组合；标准渲染的深度模式已实现，复杂遮挡场景未做逐像素自动判定。
+
+## 本轮修正与环境限制
+
+- 新增 GameTest 最初在独立 server tick 回调中直接结束，改为在 GameTest 自身 Tick 回报结果，避免批次等待。
+- 伤害概率测试最初与结束语录占用重叠，修正测试时间安排，保留冷却规则。
+- 客户端资源重载会暂停单人服务器；测试等待 overlay/暂停结束再计时。
+- 测试截图最初早于 HUD 完整提交；改成仅测试使用的 GameRenderer 尾部截图 Mixin，并单独使用 mixin 子包。
+- 内存连接跨维度后没有客户端传送确认，导致原版无敌；测试显式完成传送确认后真实伤害断言通过。
+- 重跑测试存档可能保存于下界；固定初始化到主世界后，实际跨维度清理断言通过。
+- 最后的天气 Gradle 启动和 Dedicated Gradle 复查遇到 Mojang 版本清单 TLS/下载失败，发生于游戏加载前。离线 Gradle 也因缺少版本清单失败，没有标记为通过。
+- 因现有游戏、依赖和最终编译产物仍完整，最后两项运行使用成功构建生成的 classpath/启动参数，直接启动本地 JVM；天气和 Dedicated 真实运行均通过。没有变更项目依赖、关闭 TLS 校验或伪造 Mojang 版本清单。未来重新配置 Gradle 可能需要恢复到 Mojang 元数据服务的网络连接。
+- 保留原有 JDK 25 JNA/Unsafe、原版资源及 Mojang 账号服务网络警告；它们与业务断言分开记录。
+
+主要证据均在忽略的 build/ 内：
+
+- `build/quote-build.log`
+- `build/quote-client.log`
+- `build/run/quoteSmoke/quote-smoke-result.txt`
+- `build/run/quoteSmoke/screenshots/quote-cinematic.png`
+- `build/run/quoteSmoke/screenshots/quote-speech-bubble.png`
+- `build/quote-cinematic-regression.log`
+- `build/quote-weather-regression.log`（Gradle 元数据连接失败）
+- `build/quote-weather-cached-runtime.log`（最终实际天气测试通过）
+- `build/quote-dedicated-cached-runtime.log`（最终实际服务器启动/退出通过）

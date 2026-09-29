@@ -2,6 +2,7 @@
 package com.shouyun.jiahaomode.timestop;
 
 import com.shouyun.jiahaomode.JiahaoMode;
+import com.shouyun.jiahaomode.quote.JiahaoQuoteManager;
 import com.shouyun.jiahaomode.network.JiahaoTimeStatePayload;
 import com.shouyun.jiahaomode.state.JiahaoStateManager;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
@@ -151,6 +152,7 @@ public final class JiahaoTimeStopManager {
 		world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
 				SoundCategory.PLAYERS, 0.8F, 0.65F);
 		syncWorld(world);
+		JiahaoQuoteManager.timeStarted(player, dimension.active.session, dimension.active.cinematic);
 		JiahaoMode.LOGGER.info("Jiahao time stop started by {} in {}", player.getGameProfile().getName(), world.getRegistryKey().getValue());
 		return true;
 	}
@@ -186,6 +188,7 @@ public final class JiahaoTimeStopManager {
 		for (ServerPlayerEntity player : world.getPlayers()) message(player, "ended");
 		ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(active.owner);
 		if (owner != null) {
+			JiahaoQuoteManager.timeEnded(owner, active.session, (reason.equals("duration elapsed") || reason.equals("owner toggled or left form")) && JiahaoStateManager.isJiahao(owner));
 			if (owner.getServerWorld() != world) message(owner, "ended");
 			world.playSound(null, owner.getX(), owner.getY(), owner.getZ(), SoundEvents.BLOCK_BEACON_DEACTIVATE,
 					SoundCategory.PLAYERS, 0.4F, 1.3F);
@@ -212,6 +215,7 @@ public final class JiahaoTimeStopManager {
 				if (active.cinematic && (runtime.tick - active.startTick >= CINEMATIC_TICKS
 						|| !isStableForCinematic(owner) || owner.getPos().squaredDistanceTo(active.origin) > 0.0025)) {
 					active.cinematic = false;
+					JiahaoQuoteManager.cinematicStopped(owner, active.session);
 					syncWorld(world);
 				}
 				if (active.cinematic) owner.setVelocity(Vec3d.ZERO);

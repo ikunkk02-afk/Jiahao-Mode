@@ -12,7 +12,11 @@
     "ServerPlayNetworkHandlerTimeStopMixin",
     "EntityPushTimeStopMixin",
     "EntityCinematicMovementMixin",
-    "LivingEntityCinematicMixin"
+    "LivingEntityCinematicMixin",
+    "ServerPlayerQuoteDamageMixin",
+    "ServerPlayerQuoteActivityMixin"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

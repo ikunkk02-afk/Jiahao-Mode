@@ -14,7 +14,7 @@ import java.util.UUID;
 public final class JiahaoCinematicController {
     private static final CinematicTimeline TIMELINE = new CinematicTimeline();
     private static ClientWorld world;
-    private static UUID session, owner;
+    private static UUID session, owner, failedSession;
     private static Vec3d origin = Vec3d.ZERO;
     private static float yaw;
     private static boolean playing, returning;
@@ -47,6 +47,13 @@ public final class JiahaoCinematicController {
                 player.setVelocity(Vec3d.ZERO); player.stopUsingItem(); player.setSprinting(false);
             }
         } else TIMELINE.sync(state.elapsedTicks());
+        if (isLocalOwner() && playing && MinecraftClient.getInstance().getCameraEntity() != MinecraftClient.getInstance().player
+                && !session.equals(failedSession)) {
+            failedSession = session;
+            if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(com.shouyun.jiahaomode.network.JiahaoQuotePlaybackFailedPayload.ID))
+                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new com.shouyun.jiahaomode.network.JiahaoQuotePlaybackFailedPayload(session));
+            stop(true);
+        }
         publishMovementLock();
     }
     public static void beginFrame(float delta) {
@@ -73,7 +80,7 @@ public final class JiahaoCinematicController {
         publishMovementLock();
     }
     public static void cleanup() {
-        stop(true); world = null; session = owner = null; origin = Vec3d.ZERO;
+        stop(true); world = null; session = owner = failedSession = null; origin = Vec3d.ZERO;
         elapsed = rawFrame = 0; clientTicks = 0;
         JiahaoCinematicInput.reset();
     }
@@ -93,6 +100,7 @@ public final class JiahaoCinematicController {
     public static boolean isPoseActive(PlayerEntity player) {
         return playing && elapsed < 100 && player.getWorld() == world && player.getUuid().equals(owner);
     }
+    public static UUID sessionId() { return session; }
     public static double elapsedTicks() { return elapsed; }
     public static double getProgress() { return elapsed / 100; }
     public static Vec3d origin() { return origin; }

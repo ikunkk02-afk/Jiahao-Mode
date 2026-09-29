@@ -1,0 +1,26 @@
+// Opt-in real client/renderer checks; isolated world and test-only classes.
+allprojects {
+    afterEvaluate {
+        def quoteSmoke = sourceSets.create('quoteSmoke')
+        quoteSmoke.java.setSrcDirs(['src/quotesmoke/java'])
+        quoteSmoke.resources.setSrcDirs(['src/quotesmoke/resources'])
+        quoteSmoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        quoteSmoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-quote-smoke') { sourceSet quoteSmoke }
+        loom.runs.client {
+            runDir 'build/run/quoteSmoke'
+            programArgs '--quickPlaySingleplayer', 'QuoteSmoke', '--width', '1280', '--height', '720'
+        }
+        def smokeResult = project.file('build/run/quoteSmoke/quote-smoke-result.txt')
+        tasks.named('runClient') {
+            dependsOn tasks.named('quoteSmokeClasses')
+            classpath += quoteSmoke.output
+            doFirst { java.nio.file.Files.deleteIfExists(smokeResult.toPath()) }
+            doLast {
+                if (!smokeResult.exists() || smokeResult.text.trim() != 'PASSED') {
+                    throw new GradleException('Quote client assertions failed; inspect quote-smoke-result.txt and the client log')
+                }
+            }
+        }
+    }
+}

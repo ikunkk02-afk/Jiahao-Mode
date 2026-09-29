@@ -8,5 +8,9 @@ public class JiahaoModeClient implements ClientModInitializer {
 		com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController.initialize();
 		JiahaoTimeClientNetworking.initialize();
 		JiahaoTimeKeyBindings.initialize();
+		JiahaoQuoteClientState.initialize();
+		JiahaoQuoteKeyBindings.initialize();
+		JiahaoSubtitleRenderer.initialize();
+		JiahaoSpeechBubbleRenderer.initialize();
 	}
 }
