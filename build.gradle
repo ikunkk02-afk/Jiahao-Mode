@@ -126,11 +126,6 @@ publishing {
 	}
 }
 
-// Keep local resource playback in runClient, but omit unlicensed music from all published archives.
-tasks.withType(Jar).configureEach {
-    exclude 'assets/jiahao-mode/sounds/music/jiahao_march.ogg'
-}
-
 tasks.register('runHaoTimelineTests', JavaExec) {
     dependsOn tasks.named('visualtestClasses')
     classpath = sourceSets.visualtest.runtimeClasspath

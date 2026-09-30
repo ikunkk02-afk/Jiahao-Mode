@@ -58,7 +58,7 @@ MAX 设置等待序号，每 Tick 检查基本条件：已有时停/演出、闪
 
 正常结束最后一秒淡出；死亡、换维度、退出世界、解除形态、相机异常取消立即停止。资源重载停止实例且本次不从头重播。服务端不引用客户端音频/渲染类。服务端结束路径清理冻结、锁、语录和状态，客户端断线/换世界另有兜底。
 
-本地 OGG 为 44.1 kHz、双声道、Vorbis 质量 5。未取得公开分发授权，精确路径加入 `.gitignore`，所有 Jar 任务排除该 OGG，发布/源码包保留注册和说明；本地 `processResources` 与 `runClient` 仍可使用音乐，不删除测试文件。配置说明见 [music/README.md](src/main/resources/assets/jiahao-mode/sounds/music/README.md)。
+OGG 为 44.1 kHz、双声道、Vorbis 质量 5。按用户后续要求，歌曲加入 Git 并随发布/源码 JAR 一起打包；`processResources` 与 `runClient` 使用相同资源。配置说明见 [music/README.md](src/main/resources/assets/jiahao-mode/sounds/music/README.md)。
 
 验证范围、TEST 1–25 和待人工验收项见 [TESTING.md](TESTING.md)。
 

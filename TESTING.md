@@ -718,3 +718,12 @@ python scripts/hao-multiplayer-smoke.py
 - `build/run/haoDedicated/hao-server-result.txt`、`build/run/hao{Actor,Observer}/hao-client-result.txt`
 
 原有环境级 JDK/native-access/Unsafe、Mojang TLS/公钥、offline-mode 和 shader sampler 提示仍存在，不阻碍本轮完成演出、保存或正常退出。音乐资源没有缺失/解码错误。
+
+
+### 后续更新：音乐打包发布（2026-09-30）
+
+按用户要求，取消 OGG 的 Git 忽略和 Jar 排除，歌曲加入仓库并随正式/源码 JAR 打包。上文“没有 OGG”的结论是首次交付时的历史策略，本次更新后不再适用。
+
+`gradlew.bat build`：**BUILD SUCCESSFUL in 23s**，23 个必需 GameTest 和五组检查继续通过。`python scripts/verify-hao-release.py`：**HAO RELEASE VERIFICATION PASSED**；正式 JAR 和源码 JAR 内歌曲字节均与本地 OGG 完全一致，sounds.json 仍流式引用，编码为 Vorbis、44100 Hz、双声道，测试模组依旧排除。
+
+本次只调整资源分发策略，没有修改播放、镜头或战斗逻辑；真实音乐播放沿用本节先前已通过的 runClient 实测。本次构建和资源证据为 `build/hao-music-build.log`、`build/hao-music-release-verification.txt`。仓库推送后发布 GitHub `v1.0.0`，附正式 JAR 与源码 JAR。

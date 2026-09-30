@@ -40,6 +40,3 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
-
-# Local test music; distribution rights have not been confirmed.
-src/main/resources/assets/jiahao-mode/sounds/music/jiahao_march.ogg
