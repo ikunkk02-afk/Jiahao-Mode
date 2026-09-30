@@ -170,5 +170,20 @@
   "hud.jiahao-mode.hao.max": "Hao MAX",
   "hud.jiahao-mode.hao.gathering": "Hao is gathering",
   "message.jiahao-mode.hao.full": "Hao is full.",
-  "message.jiahao-mode.hao.uncontrollable": "Jiahao cannot hold it in anymore."
+  "message.jiahao-mode.hao.uncontrollable": "Jiahao cannot hold it in anymore.",
+  "message.jiahao-mode.buff.form_required": "Only Jiahao can understand its true power.",
+  "message.jiahao-mode.buff.cooldown": "Device recharging: no new reward for this operation.",
+  "message.jiahao-mode.buff.invalid": "Device rewards are unavailable right now.",
+  "message.jiahao-mode.buff.preserved": "Reward resolved: your stronger or longer effect is preserved.",
+  "message.jiahao-mode.buff.granted": "Granted: %s level %s (%ss)",
+  "message.jiahao-mode.buff.override": "SYSTEM OVERRIDE",
+  "jiahao.quote.market.11": "The market finally understands me.",
+  "jiahao.quote.market.12": "Profit is just part of the process.",
+  "jiahao.quote.market.13": "The numbers are cooperating.",
+  "jiahao.quote.market.14": "Today's trend knows how to behave.",
+  "jiahao.quote.code.13": "The system has accepted the changes.",
+  "jiahao.quote.code.14": "No errors means approval.",
+  "jiahao.quote.code.15": "The rules have been updated.",
+  "jiahao.quote.code.16": "This time, the system understands.",
+  "jiahao.quote.code.17": "Permissions are no longer a problem."
 }

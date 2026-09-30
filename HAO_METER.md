@@ -54,11 +54,11 @@ MAX 设置等待序号，每 Tick 检查基本条件：已有时停/演出、闪
 
 `jiahao-mode:music.jiahao_march` 在 `sound.ModSounds` 注册，`assets/jiahao-mode/sounds.json` 使用 `jiahao-mode:music/jiahao_march`、`stream: true`。仅通过 Minecraft 资源系统播放，不读取系统 FLAC；缺音频跳过音乐，演出继续。
 
-客户端 `HaoMarchSound extends MovingSoundInstance` 使用原版 `TickableSoundInstance` 行为，MUSIC 分类、相对音量 0.75、非定位/无衰减，0.4 秒淡入、1 秒淡出。服务器确认后每个会话至多一实例，经过 6 Tick 才开始。
+客户端 `JiahaoMusicController` 管理唯一的 `HaoMarchSound extends MovingSoundInstance`，使用原版 `TickableSoundInstance` 行为，MUSIC 分类、相对音量 0.75、非定位/无衰减，0.4 秒淡入、1 秒淡出。服务器确认后每个会话至多一实例，经过 6 Tick 才开始。
 
 正常结束最后一秒淡出；死亡、换维度、退出世界、解除形态、相机异常取消立即停止。资源重载停止实例且本次不从头重播。服务端不引用客户端音频/渲染类。服务端结束路径清理冻结、锁、语录和状态，客户端断线/换世界另有兜底。
 
-OGG 为 44.1 kHz、双声道、Vorbis 质量 5。按用户后续要求，歌曲加入 Git 并随发布/源码 JAR 一起打包；`processResources` 与 `runClient` 使用相同资源。配置说明见 [music/README.md](src/main/resources/assets/jiahao-mode/sounds/music/README.md)。
+OGG 为 44.1 kHz、双声道、Vorbis 质量 5。按用户后续要求，歌曲加入 Git 并随发布/源码 JAR 一起打包；`processResources` 与 `runClient` 使用相同资源。配置说明见 [music/readme.md](src/main/resources/assets/jiahao-mode/sounds/music/readme.md)。
 
 验证范围、TEST 1–25 和待人工验收项见 [TESTING.md](TESTING.md)。
 

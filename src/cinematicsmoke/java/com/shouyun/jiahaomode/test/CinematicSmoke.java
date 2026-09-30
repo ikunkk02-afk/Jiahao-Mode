@@ -4,6 +4,7 @@ package com.shouyun.jiahaomode.test;
 import com.mojang.authlib.GameProfile;
 import com.shouyun.jiahaomode.JiahaoMode;
 import com.shouyun.jiahaomode.client.cinematic.*;
+import com.shouyun.jiahaomode.client.JiahaoMusicController;
 import com.shouyun.jiahaomode.client.visual.JiahaoTimeStopClientState;
 import com.shouyun.jiahaomode.network.JiahaoTimeStatePayload;
 import com.shouyun.jiahaomode.network.JiahaoTimeTogglePayload;
@@ -43,6 +44,7 @@ public final class CinematicSmoke implements ClientModInitializer {
     private long menuOpened;
     private double pausedElapsed;
     private String failure;
+    private net.minecraft.client.sound.SoundInstance music;
     private final java.util.Set<String> screenshots = new java.util.HashSet<>();
     @Override public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);
@@ -122,10 +124,16 @@ public final class CinematicSmoke implements ClientModInitializer {
             if (stage == 2) {
                 if (!JiahaoCinematicController.isCameraActive()) { check(ticks < 80, "S2C must start cinematic"); return; }
                 anchor = client.player.getPos(); frozenWeather = JiahaoTimeStopClientState.getWorldAnimationTime();
+                music=JiahaoMusicController.soundInstance();check(music!=null,"Confirmed R creates march voice");
+                var replay=new JiahaoTimeStatePayload(client.world.getRegistryKey().getValue(),true,client.player.getUuid(),300,
+                        client.world.getTime(),client.world.getTimeOfDay(),JiahaoMusicController.sessionId(),0,false,client.player.getPos(),0);
+                JiahaoMusicController.onTimeState(client.world,replay);
+                check(JiahaoMusicController.soundInstance()==music,"Repeated R sync reuses voice even without cinematic flag");
                 stage = 3; ticks = 0; return;
             }
             if (stage == 3) {
                 double elapsed = JiahaoCinematicController.elapsedTicks();
+                if(elapsed>10&&!earlyRequested)check(JiahaoMusicController.isPlaying(),"R sound engine actually playing");
                 if (JiahaoCinematicController.locksInput()) {
                     check(client.player.getPos().squaredDistanceTo(anchor) < .003, "Owner position stable");
                     client.options.forwardKey.setPressed(true); client.options.jumpKey.setPressed(true);
@@ -163,10 +171,19 @@ public final class CinematicSmoke implements ClientModInitializer {
                     check(JiahaoTimeStopClientState.isTimeStopped(client.world), "Cinematic finishes before world resumes");
                     check(movingFrames > 30, "Camera advances on rendered frames");
                     if (cycle == 0) check(menuPaused, "ESC test actually paused integrated server");
+                    check(JiahaoMusicController.soundInstance()==music&&JiahaoMusicController.isPlaying(),"Camera ends while same R music continues");
                     testModelAndObserver(client);
                 }
                 JiahaoMode.LOGGER.info("CINEMATIC CYCLE {} PASSED: {} rendered frames, {} moving frames, perspective {}", cycle, frames, movingFrames, perspective);
                 stage = 4; ticks = 0; return;
+            }
+            if(stage==4){
+                if(cycle<3&&ticks<175)check(JiahaoMusicController.isPlaying(),"R music covers free movement after camera");
+                if(ticks==225){
+                    check(!JiahaoTimeStopClientState.isTimeStopped(client.world)&&JiahaoMusicController.soundInstance()==null,"Natural/early/abnormal end clears music");
+                    if(cycle<3)ClientPlayNetworking.send(JiahaoTimeTogglePayload.INSTANCE);
+                }
+                if(ticks==230&&cycle<3)check(JiahaoMusicController.soundInstance()==null,"Cooldown R never starts music");
             }
             if (stage == 4 && ticks > 360) {
                 if (cycle == 4 && client.player != null && !client.player.isAlive()) {
@@ -192,6 +209,7 @@ public final class CinematicSmoke implements ClientModInitializer {
             server.getCommandManager().executeWithPrefix(p.getCommandSource().withLevel(4), "fillbiome -8 179 -8 8 185 8 minecraft:plains");
             p.getAbilities().flying = false; p.sendAbilitiesUpdate();
             equipArmor(p); JiahaoStateManager.setJiahao(p,true); world.setWeather(0,12000,true,false); world.setTimeOfDay(12000);
+            com.shouyun.jiahaomode.hao.HaoMeterManager.set(p,0);
         });
     }
     private void testModelAndObserver(MinecraftClient client) {

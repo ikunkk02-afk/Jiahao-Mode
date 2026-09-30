@@ -29,8 +29,11 @@ public final class HaoDedicatedServer implements ModInitializer {
             if(!server.isDedicated()||done)return;
             var a=server.getPlayerManager().getPlayer("HaoActor");var b=server.getPlayerManager().getPlayer("HaoObserver");if(a==null||b==null)return;
             try{
-                if(!begun){if(++ready==200)server.getCommandManager().executeWithPrefix(a.getCommandSource().withLevel(4),"jiahao hao set 99");
-                    if(HaoMeterManager.isBursting(a)){begun=true;age=0;}else if(ready>300)throw new AssertionError("Dedicated burst did not start");
+                if(!begun){ready++;
+                    if(ready==200&&!JiahaoTimeStopManager.startTimeStop(a))throw new AssertionError("Dedicated manual time stop rejected");
+                    if(ready>200&&ready<490&&!JiahaoTimeStopManager.shouldFreeze(b))throw new AssertionError("Manual observer freeze");
+                    if(ready==680)server.getCommandManager().executeWithPrefix(a.getCommandSource().withLevel(4),"jiahao hao set 99");
+                    if(HaoMeterManager.isBursting(a)){begun=true;age=0;}else if(ready>800)throw new AssertionError("Dedicated burst did not start");
                 }else if(HaoMeterManager.isBursting(a)){age++;if(!JiahaoTimeStopManager.shouldFreeze(b))throw new AssertionError("Observer freeze");}
                 else {if(age<230||HaoMeterManager.data(a).units()!=0)throw new AssertionError("Dedicated completion");done=true;Files.writeString(Path.of("hao-server-result.txt"),"PASSED");}
             }catch(Throwable e){done=true;try{Files.writeString(Path.of("hao-server-result.txt"),"FAILED: "+e);}catch(Exception ignored){}e.printStackTrace();}

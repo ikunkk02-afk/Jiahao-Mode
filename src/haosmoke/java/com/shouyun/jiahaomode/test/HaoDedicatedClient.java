@@ -15,7 +15,7 @@ import java.nio.file.*;
 import java.util.*;
 
 public final class HaoDedicatedClient implements ClientModInitializer {
-    private int ticks,after;private boolean seen,done,preference;private double weather;
+    private int ticks,after,manualTicks;private boolean seen,done,preference,wasFrozen,seenManual,seenBurst;private double weather;
     private final Set<JiahaoPoseType> poses=new HashSet<>();private final Set<String> quotes=new HashSet<>(),shots=new HashSet<>();
     public void onInitializeClient(){
         if(!Boolean.getBoolean("jiahao.hao.dedicated"))return;
@@ -28,13 +28,17 @@ public final class HaoDedicatedClient implements ClientModInitializer {
                 var actor=c.world.getPlayers().stream().filter(p->p.getName().getString().equals("HaoActor")).findFirst().orElse(null);if(actor==null)return;
                 boolean local=c.player==actor;boolean frozen=JiahaoTimeStopClientState.isTimeStopped(c.world);
                 if(frozen){
-                    if(!seen){seen=true;weather=JiahaoTimeStopClientState.getWorldAnimationTime();}
+                    if(!wasFrozen){seen=true;weather=JiahaoTimeStopClientState.getWorldAnimationTime();after=0;manualTicks=0;}
+                    boolean burst=JiahaoCinematicController.isBurstPose(actor);
+                    if(burst)seenBurst=true;else if(!seenBurst){seenManual=true;manualTicks++;}
                     check(Math.abs(JiahaoTimeStopClientState.getWorldAnimationTime()-weather)<.00001,"Weather stays fixed for both clients");
-                    if(JiahaoCinematicController.isPoseActive(actor)){check(JiahaoCinematicController.isCameraActive()==local&&JiahaoCinematicController.locksInput()==local,"Only actor owns camera/input during active pose timeline");poses.add(JiahaoCinematicController.poseType(actor));}
+                    if(JiahaoCinematicController.isPoseActive(actor)){check(JiahaoCinematicController.isCameraActive()==local&&JiahaoCinematicController.locksInput()==local,"Only actor owns camera/input during active pose timeline");if(burst)poses.add(JiahaoCinematicController.poseType(actor));}
+                    if(local&&seenManual&&!seenBurst&&manualTicks>20&&manualTicks<270)check(JiahaoMusicController.isPlaying(),"Dedicated R music continues after camera");
                     if(!local)check(!JiahaoCinematicController.isCameraActive()&&!JiahaoCinematicController.locksInput(),"Observer never owns camera even across start/end packets");
                     var q=JiahaoQuoteClientState.active().get(actor.getUuid());if(q!=null&&q.quote.category()==JiahaoQuoteCategory.HAO_BURST)quotes.add(q.quote.translationKey());
-                    var soundField=HaoMarchSound.class.getDeclaredField("playing");soundField.setAccessible(true);if(!local)check(soundField.get(null)==null,"Observer never hears actor march");
-                }else if(seen&&++after>20){check(poses.size()>=3&&poses.size()<=5,"Both clients see multiple matching poses");check(quotes.size()>=2&&quotes.size()<=4,"Actor subtitles and observer speech bubbles");check(!JiahaoCinematicController.isCameraActive()&&!JiahaoCinematicController.locksInput(),"Clean end");finish(c,"PASSED");}
+                    if(!local)check(JiahaoMusicController.soundInstance()==null,"Observer never hears actor march");
+                }else if(seenBurst&&++after>20){check(seenManual,"Both clients saw manual time stop first");check(poses.size()>=3&&poses.size()<=5,"Both clients see multiple matching poses");check(quotes.size()>=2&&quotes.size()<=4,"Actor subtitles and observer speech bubbles");check(!JiahaoCinematicController.isCameraActive()&&!JiahaoCinematicController.locksInput()&&JiahaoMusicController.soundInstance()==null,"Clean end");finish(c,"PASSED");}
+                wasFrozen=frozen;
             }catch(Throwable e){e.printStackTrace();finish(c,"FAILED: "+e);}
         });
         HudRenderCallback.EVENT.register((draw,counter)->{

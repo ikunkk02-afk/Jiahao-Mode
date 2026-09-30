@@ -19,18 +19,18 @@ public final class HaoClient {
     public static void initialize() {
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.resource.ResourceType.CLIENT_RESOURCES).registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
             public net.minecraft.util.Identifier getFabricId(){return com.shouyun.jiahaomode.JiahaoMode.id("hao_music_cleanup");}
-            public void reload(net.minecraft.resource.ResourceManager resources){HaoMarchSound.onResourceReload();}
+            public void reload(net.minecraft.resource.ResourceManager resources){JiahaoMusicController.onResourceReload();}
         });
         ClientPlayNetworking.registerGlobalReceiver(HaoMeterPayload.ID,(p,c)->{useWorld(c.client().world);target=Math.max(0,Math.min(10000,p.units()));pending=p.pending();bursting=p.bursting();});
-        ClientPlayNetworking.registerGlobalReceiver(HaoBurstPayload.ID,(p,c)->JiahaoCinematicController.onBurstSync(p));
+        ClientPlayNetworking.registerGlobalReceiver(HaoBurstPayload.ID,(p,c)->{JiahaoCinematicController.onBurstSync(p);JiahaoMusicController.onBurstState(p);});
         ClientPlayNetworking.registerGlobalReceiver(HaoReadyPayload.ID,(p,c)->{
             var client=c.client();boolean ready=client.world!=null&&client.player!=null&&client.player.isAlive()
                 &&client.world.getRegistryKey().getValue().equals(p.dimension())&&client.currentScreen==null
                 &&client.getOverlay()==null&&client.getCameraEntity()==client.player&&!JiahaoCinematicController.isCameraActive()&&!JiahaoDodgeClientController.locksMovement();
             ClientPlayNetworking.send(new HaoReadyPayload(p.token(),p.dimension(),ready));
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((h,c)->{reset();HaoMarchSound.stop();});
-        ClientTickEvents.END_CLIENT_TICK.register(c->{useWorld(c.world);HaoMarchSound.update(c);});
+        ClientPlayConnectionEvents.DISCONNECT.register((h,c)->{reset();JiahaoMusicController.stopJiahaoMarch();});
+        ClientTickEvents.END_CLIENT_TICK.register(c->{useWorld(c.world);JiahaoMusicController.update(c);});
         HudRenderCallback.EVENT.register((draw,counter)->{
             var c=MinecraftClient.getInstance();useWorld(c.world);
             if(c.player==null||c.options.hudHidden||!JiahaoStateManager.isJiahao(c.player)||c.currentScreen!=null)return;

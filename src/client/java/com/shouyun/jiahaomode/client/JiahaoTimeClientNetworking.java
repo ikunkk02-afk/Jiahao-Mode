@@ -19,6 +19,7 @@ public final class JiahaoTimeClientNetworking {
 			world.setTime(payload.gameTime());
 			world.setTimeOfDay(payload.dayTime());
 			com.shouyun.jiahaomode.client.cinematic.JiahaoCinematicController.onStateSync(world, payload);
+            JiahaoMusicController.onTimeState(world, payload);
 		});
 	}
 }

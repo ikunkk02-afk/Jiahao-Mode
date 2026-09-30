@@ -727,3 +727,39 @@ python scripts/hao-multiplayer-smoke.py
 `gradlew.bat build`：**BUILD SUCCESSFUL in 23s**，23 个必需 GameTest 和五组检查继续通过。`python scripts/verify-hao-release.py`：**HAO RELEASE VERIFICATION PASSED**；正式 JAR 和源码 JAR 内歌曲字节均与本地 OGG 完全一致，sounds.json 仍流式引用，编码为 Vorbis、44100 Hz、双声道，测试模组依旧排除。
 
 本次只调整资源分发策略，没有修改播放、镜头或战斗逻辑；真实音乐播放沿用本节先前已通过的 runClient 实测。本次构建和资源证据为 `build/hao-music-build.log`、`build/hao-music-release-verification.txt`。仓库推送后发布 GitHub `v1.0.0`，附正式 JAR 与源码 JAR。
+
+## 2026-09-30：R 进行曲与设备随机 Buff
+
+实现说明、精确权重和持续时间见 [GADGET_BUFFS.md](GADGET_BUFFS.md)。本轮仍为 Fabric 1.21.1，编译目标 Java 21，本机以既有 JDK 25 运行 Gradle/Minecraft。歌曲沿用已跟踪的资源；项目所有者确认已购买版权并可使用。
+
+### 最终执行证据
+
+| 检查 | 结果与本地记录 |
+|---|---|
+| `gradlew.bat build` | `BUILD SUCCESSFUL in 38s`，**27 个必需 GameTest 全通过**，既有五组数学/模型检查通过；`build/gadget-final-build.log` |
+| 设备与 R 专项真实客户端 | `scripts/gadget-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 1m 50s`；`build/gadget-client-final.log`、`build/run/gadgetSmoke/gadget-smoke-result.txt` |
+| Hao Burst 回归 | `scripts/hao-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 1m 5s`；`build/gadget-hao-client.log` |
+| 完整镜头回归 | `scripts/cinematic-smoke.gradle runClient`：`CINEMATIC SMOKE PASSED`、`BUILD SUCCESSFUL in 3m 8s`；`build/gadget-cinematic.log` |
+| 专用服务器、发动者及旁观客户端 | `scripts/hao-multiplayer-smoke.py`：server/actor/observer 三个结果均 `PASSED`，`HAO DEDICATED + TWO CLIENTS ALL PASSED`；`build/gadget-dedicated.log`，各端详细日志仍在 `build/hao-multiplayer-first-*.log` |
+| 天气冻结回归 | `scripts/weather-visual-smoke.gradle runClient`：`WEATHER VISUAL SMOKE PASSED`、`BUILD SUCCESSFUL in 1m 12s`；`build/gadget-weather.log` |
+| 语录回归 | `scripts/quote-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 1m 9s`；`build/gadget-quotes.log` |
+| 闪避回归 | `scripts/dodge-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 1m`；`build/gadget-dodge.log` |
+| 发布包 | `python scripts/verify-hao-release.py`：`HAO RELEASE VERIFICATION PASSED`；`build/gadget-release-verification.txt` |
+
+新增四个服务器测试覆盖精确累计权重边界、普通持续时间端点、5% Override 三种候选、等级/时长/无限效果保护、原版升级、不清理其他效果、旁观者拒绝、普通形态合法会话完成但无 Buff、BUY/SELL 共用冷却、Code 独立冷却、过早 COMMIT、100 次令牌重放与 BEGIN 请求、伪造会话、移动原物品失效，以及重新登录、重生、换维度后保留冷却和 599/600 Tick 边界。随机池使用可控随机序列，不靠概率碰运气。模拟连接显式 flush 后读取 OPEN/GRANT/结果包，避免误读上一操作的缓存响应。
+
+设备专项实际使用物品右键与 GUI 按钮，Code 输入 `hello`、`cmd`、`powershell`、`rm -rf`、`shutdown`，仅显示假输出；普通形态 GUI 可用且无效果，嘉豪 BUY/SELL 和 Code 实际触发服务端状态效果，连续操作演出继续。R 使用真实按键绑定，验证普通形态拒绝、服务器确认前无声音、镜头结束后的原实例继续、再次 R 的原实例音量递减并停止、冷却请求不播放、解除形态、资源重载后重复同步不重播、强制结束和断线清理。
+
+完整镜头测试另覆盖三个视角、单机暂停、重复同步、`cinematic=false` 的同步不停止音乐、15 秒自然结束、提前解除、死亡、维度变化及退出。测试夹具每轮归零豪气，避免积累到 MAX 后自动 Hao Burst 干扰手动暂停断言。Hao Burst 实际声音引擎播放、多 Pose、字幕、豪气、相机及异常结束均回归通过；修复了从零音量提交声音实例导致引擎跳过播放的问题。
+
+双客户端专用服务器先执行完整手动暂停，再执行 Hao Burst。发动者手动音乐在镜头恢复后继续；旁观客户端两阶段声音实例始终为空，两端天气、冻结和恢复均通过。服务器初始化无客户端类引用，结果载荷只注册 S2C。
+
+正式 JAR 与 sources JAR 内 `jiahao_march.ogg` 与本地歌曲字节一致，Vorbis / 44100 Hz / stereo；14 条 Market 与 17 条 Code 中英语录、全部奖励提示齐全。测试入口、测试 Mixin 与测试类未进入发布包。
+
+### 音频证据与日志限制
+
+已验证 Minecraft 声音引擎 `isPlaying`、声音实例唯一性及淡出音量，**未取得实际听音/音频录制证据，不能宣称人工实际听到歌曲**。
+
+最终日志仍有 JDK 25/JNA native-access、Guava Unsafe 弃用提示，原版山羊角缺失音效与 Shader Sampler2 提示；部分测试假账号的 Mojang profile 查询失败。没有新的业务编译错误或 Mixin 注入失败。歌曲说明文件改为小写 `sounds/music/readme.md`，消除了原有非法资源路径 ERROR。
+
+设备专项和天气回归在退出时各出现一次 OpenAL `Stop: Invalid name parameter` ERROR；声音播放、音乐清理断言和正常退出均通过，退出期该提示尚未消除，不报告为零 Warning/ERROR。运行证据保留原始日志。`git diff --check` 无空白错误；Git 对部分 Windows 文本提示后续 LF → CRLF 规范化，不影响构建。

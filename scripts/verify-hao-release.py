@@ -16,7 +16,7 @@ for name in ['jiahao-mode-1.0.0.jar', 'jiahao-mode-1.0.0-sources.jar']:
         entries = archive.namelist()
         assert packed_audio in entries, name + ' is missing bundled music'
         assert archive.read(packed_audio) == (root / audio).read_bytes(), name + ' contains different music'
-        assert not any('HaoSmoke' in entry or 'HaoDedicated' in entry or 'hao-smoke' in entry for entry in entries)
+        assert not any('/test/' in entry or 'HaoSmoke' in entry or 'HaoDedicated' in entry or 'hao-smoke' in entry for entry in entries)
         sounds = json.loads(archive.read('assets/jiahao-mode/sounds.json'))
         assert sounds['music.jiahao_march']['sounds'] == [
             {'name': 'jiahao-mode:music/jiahao_march', 'stream': True}]
@@ -24,6 +24,9 @@ for name in ['jiahao-mode-1.0.0.jar', 'jiahao-mode-1.0.0-sources.jar']:
             lines = json.loads(archive.read(f'assets/jiahao-mode/lang/{language}.json'))
             assert len([key for key in lines if key.startswith('jiahao.quote.hao_burst.')]) == 20
             assert all(lines[f'jiahao.quote.hao_burst.{i}'] for i in range(1, 21))
+            assert all(lines[f'jiahao.quote.market.{i}'] for i in range(1, 15))
+            assert all(lines[f'jiahao.quote.code.{i}'] for i in range(1, 18))
+            assert all(lines[f'message.jiahao-mode.buff.{key}'] for key in ['form_required','cooldown','invalid','preserved','granted','override'])
         print(name + ': registration/translations/music present; test harness excluded')
 
 for source in (root / 'src/main/java').rglob('*.java'):

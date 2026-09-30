@@ -90,6 +90,8 @@ Minecraft 1.21.1 使用这里的 item model，不需要较新版本的 `assets/<
 
 ## 构建与测试
 
+R 手动时间暂停现在复用嘉豪进行曲，覆盖完整 15 秒；Market Viewer 的 BUY/SELL 和 Code Editor 完成假命令后，嘉豪形态可获得服务端随机 Buff。两个设备各有独立 30 秒奖励冷却，Code 有 5% SYSTEM OVERRIDE。普通形态和冷却期间 GUI 仍正常使用。详情与权重见 [GADGET_BUFFS.md](GADGET_BUFFS.md)。
+
 ```powershell
 .\gradlew.bat build
 .\gradlew.bat runClient

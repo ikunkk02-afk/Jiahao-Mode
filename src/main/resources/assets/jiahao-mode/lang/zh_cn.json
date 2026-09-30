@@ -170,5 +170,20 @@
   "hud.jiahao-mode.hao.max": "豪气 MAX",
   "hud.jiahao-mode.hao.gathering": "豪气正在聚集",
   "message.jiahao-mode.hao.full": "豪气已满。",
-  "message.jiahao-mode.hao.uncontrollable": "嘉豪控制不住了。"
+  "message.jiahao-mode.hao.uncontrollable": "嘉豪控制不住了。",
+  "message.jiahao-mode.buff.form_required": "只有嘉豪才能理解真正的力量。",
+  "message.jiahao-mode.buff.cooldown": "设备正在蓄力：本次操作无新奖励。",
+  "message.jiahao-mode.buff.invalid": "当前无法获得设备奖励。",
+  "message.jiahao-mode.buff.preserved": "奖励已结算：保留已有的更强或更持久效果。",
+  "message.jiahao-mode.buff.granted": "获得：%s %s 级（%s 秒）",
+  "message.jiahao-mode.buff.override": "SYSTEM OVERRIDE",
+  "jiahao.quote.market.11": "市场终于看懂了我。",
+  "jiahao.quote.market.12": "收益只是过程。",
+  "jiahao.quote.market.13": "数字开始配合了。",
+  "jiahao.quote.market.14": "看来今天的趋势比较懂事。",
+  "jiahao.quote.code.13": "系统已经接受修改。",
+  "jiahao.quote.code.14": "没有报错，就是同意。",
+  "jiahao.quote.code.15": "规则已经更新。",
+  "jiahao.quote.code.16": "这一次，系统理解了。",
+  "jiahao.quote.code.17": "权限已经不是问题。"
 }

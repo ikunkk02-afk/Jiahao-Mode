@@ -28,13 +28,14 @@ public final class HaoGadgetManager {
     private static Runtime runtime(MinecraftServer server){if(!server.isOnThread())throw new IllegalStateException("Gadget requires server thread");return SERVERS.computeIfAbsent(server,k->new Runtime());}
     private static long now(ServerPlayerEntity p){return JiahaoTimeStopManager.getServerTick(p.getServer());}
     private static boolean held(ServerPlayerEntity p,boolean code){var item=code?ModItems.JIAHAO_CODE_EDITOR:ModItems.MARKET_VIEWER;return p.getMainHandStack().isOf(item)||p.getOffHandStack().isOf(item);}
-    private static boolean valid(ServerPlayerEntity p,Session s){return p.isAlive()&&JiahaoStateManager.isJiahao(p)&&held(p,s.code)
+    private static boolean valid(ServerPlayerEntity p,Session s){return p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&held(p,s.code)
         &&p.getStackInHand(s.hand)==s.heldStack&&(s.hand==net.minecraft.util.Hand.OFF_HAND||p.getInventory().selectedSlot==s.selectedSlot)
         &&s.dimension.equals(p.getWorld().getRegistryKey().getValue())&&!JiahaoCinematicLocks.isLocked(p)&&!JiahaoTimeStopManager.shouldFreeze(p)
         &&now(p)-s.heartbeat<=30&&now(p)<s.expires;}
     public static void initialize(){
         PayloadTypeRegistry.playC2S().register(HaoGadgetPayload.ID,HaoGadgetPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(HaoGadgetPayload.ID,HaoGadgetPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(com.shouyun.jiahaomode.network.JiahaoGadgetResultPayload.ID,com.shouyun.jiahaomode.network.JiahaoGadgetResultPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(HaoGadgetPayload.ID,(packet,context)->receive(context.player(),packet));
         ServerTickEvents.END_SERVER_TICK.register(server->{var r=runtime(server);r.sessions.entrySet().removeIf(e->{var p=server.getPlayerManager().getPlayer(e.getKey());return p==null||!valid(p,e.getValue());});});
         ServerPlayConnectionEvents.DISCONNECT.register((h,s)->runtime(s).sessions.remove(h.player.getUuid()));
@@ -43,7 +44,7 @@ public final class HaoGadgetManager {
         ServerLifecycleEvents.SERVER_STOPPED.register(SERVERS::remove);
     }
     public static void open(ServerPlayerEntity p,boolean code,net.minecraft.util.Hand hand){
-        if(!p.isAlive()||!JiahaoStateManager.isJiahao(p)||!held(p,code)||JiahaoCinematicLocks.isLocked(p)||!ServerPlayNetworking.canSend(p,HaoGadgetPayload.ID))return;
+        if(!p.isAlive()||p.isRemoved()||p.isSpectator()||!held(p,code)||JiahaoCinematicLocks.isLocked(p)||JiahaoTimeStopManager.shouldFreeze(p)||!ServerPlayNetworking.canSend(p,HaoGadgetPayload.ID))return;
         var s=new Session(p,code,hand,now(p));runtime(p.getServer()).sessions.put(p.getUuid(),s);
         ServerPlayNetworking.send(p,new HaoGadgetPayload(s.id,NONE,code?Action.CODE:Action.BUY,Phase.OPEN));
     }
@@ -60,7 +61,11 @@ public final class HaoGadgetManager {
         }else if(packet.phase()==Phase.COMMIT&&s.operation!=null&&s.operation.equals(packet.operation())&&s.action==packet.action()&&now(p)>=s.due){
             UUID operation=s.operation;s.operation=null;
             var cooldown=r.cooldowns.computeIfAbsent(p.getUuid(),k->new long[2]);int index=s.code?1:0;
-            if(now(p)>=cooldown[index]){cooldown[index]=now(p)+200;HaoMeterManager.gain(p,2);}
+            if(JiahaoStateManager.isJiahao(p)&&now(p)>=cooldown[index]){cooldown[index]=now(p)+200;HaoMeterManager.gain(p,2);}
+            var source=s.code?com.shouyun.jiahaomode.buff.JiahaoBuffSource.CODE_EDITOR:com.shouyun.jiahaomode.buff.JiahaoBuffSource.MARKET_VIEWER;
+            var result=com.shouyun.jiahaomode.buff.JiahaoBuffManager.tryGrantRandomBuff(p,source);
+            if(ServerPlayNetworking.canSend(p,com.shouyun.jiahaomode.network.JiahaoGadgetResultPayload.ID))
+                ServerPlayNetworking.send(p,new com.shouyun.jiahaomode.network.JiahaoGadgetResultPayload(s.id,operation,result));
             ServerPlayNetworking.send(p,new HaoGadgetPayload(s.id,operation,s.action,Phase.COMPLETE));
         }
     }

@@ -14,6 +14,8 @@ public final class JiahaoMarketScreen extends Screen implements JiahaoSubtitleRe
     private final int[] xs=new int[JiahaoMarketModel.CAPACITY],ys=new int[JiahaoMarketModel.CAPACITY];
     private int left,top,panelWidth,panelHeight,chartLeft,chartTop,chartWidth,chartHeight,ticks,messageUntil;
     private Text message=Text.empty(),current=Text.empty(),change=Text.empty(),high=Text.empty(),low=Text.empty();
+    private Text reward=Text.empty();private int rewardUntil;
+    public void rewardMessage(Text text){reward=text;rewardUntil=ticks+80;}
     public JiahaoMarketScreen(){super(t("title"));}
     private static Text t(String suffix){return Text.translatable("screen.jiahao-mode.market."+suffix);}
     @Override protected void init(){
@@ -57,6 +59,7 @@ public final class JiahaoMarketScreen extends Screen implements JiahaoSubtitleRe
         d.drawText(textRenderer,t("fictional"),left+12,top+panelHeight-51,0x829BA6,false);
         if(ticks<messageUntil)d.drawText(textRenderer,message,left+158,top+panelHeight-30,0x8DE1BC,false);
         super.render(d,mouseX,mouseY,delta);JiahaoSubtitleRenderer.render(d);
+        if(ticks<rewardUntil)d.drawCenteredTextWithShadow(textRenderer,reward,width/2,top+panelHeight+6,0xADEDBD);
     }
     @Override public boolean shouldPause(){return false;}
     @Override public void renderBackground(DrawContext d,int mouseX,int mouseY,float delta){} // Custom background is drawn before the content.

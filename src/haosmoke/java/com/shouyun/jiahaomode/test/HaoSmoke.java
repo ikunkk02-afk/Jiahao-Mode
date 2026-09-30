@@ -36,9 +36,9 @@ public final class HaoSmoke implements ClientModInitializer {
     private int ticks,total,stage,cycle,frames,moving;private boolean done,used,seenMusic;private String failure;
     private double weather,shotPoseAt;private JiahaoPoseType shotPose;private Vec3d lastCamera;private Perspective perspective;private int fov;
     private final Set<JiahaoPoseType> seenPoses=new HashSet<>();private final Set<String> quotes=new HashSet<>(),shots=new HashSet<>();
-    private volatile int serverUnits,baseUnits;private volatile long baseTick;private volatile boolean serverCheck;
+    private volatile int serverUnits,baseUnits;private volatile long baseTick;private volatile boolean serverCheck,serverBuff;
     public void onInitializeClient(){
-        if(Boolean.getBoolean("jiahao.hao.dedicated"))return;
+        if(Boolean.getBoolean("jiahao.hao.dedicated")||Boolean.getBoolean("jiahao.gadget.smoke"))return;
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);
         WorldRenderEvents.AFTER_ENTITIES.register(context->{
             if(done||stage!=5||!JiahaoCinematicController.isCameraActive())return;
@@ -77,13 +77,13 @@ public final class HaoSmoke implements ClientModInitializer {
             if(stage==2){
                 if(ticks==10){var screen=(JiahaoMarketScreen)c.currentScreen;var buttons=screen.children().stream().filter(x->x instanceof ButtonWidget).map(x->(ButtonWidget)x).toList();baseline(c);buttons.getFirst().onPress();}
                 if(ticks==45){snapshot(c);}
-                if(ticks==55){check(serverCheck,"Real Market completion rewards +2 units="+serverUnits);c.setScreen(null);var uuid=c.player.getUuid();c.getServer().execute(()->{var p=c.getServer().getPlayerManager().getPlayer(uuid);HaoMeterManager.set(p,0);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.JIAHAO_CODE_EDITOR));});stage=3;ticks=0;}
+                if(ticks==55){check(serverCheck&&serverBuff,"Real Market completion rewards +2 and status effect units="+serverUnits);c.setScreen(null);var uuid=c.player.getUuid();c.getServer().execute(()->{var p=c.getServer().getPlayerManager().getPlayer(uuid);HaoMeterManager.set(p,0);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.JIAHAO_CODE_EDITOR));});stage=3;ticks=0;}
             }
             if(stage==3){
                 if(ticks==15){c.interactionManager.interactItem(c.player,Hand.MAIN_HAND);check(c.currentScreen instanceof JiahaoCodeScreen,"Real right click opens Code");}
                 if(ticks==22){var screen=(JiahaoCodeScreen)c.currentScreen;var input=(TextFieldWidget)screen.children().stream().filter(x->x instanceof TextFieldWidget).findFirst().orElseThrow();baseline(c);input.setText("print(hao)");screen.keyPressed(GLFW.GLFW_KEY_ENTER,0,0);}
                 if(ticks==65)snapshot(c);
-                if(ticks==75){check(serverCheck,"Real Code completion rewards +2 units="+serverUnits);c.setScreen(null);arm(c);}
+                if(ticks==75){check(serverCheck&&serverBuff,"Real Code completion rewards +2 and effect units="+serverUnits);c.setScreen(null);arm(c);}
             }
             if(stage==4){
                 if(JiahaoCinematicController.cameraType()==CinematicType.HAO_BURST){
@@ -114,7 +114,7 @@ public final class HaoSmoke implements ClientModInitializer {
         }catch(Throwable e){e.printStackTrace();failure=e.toString();finish(c,false);}
     }
     private void baseline(MinecraftClient c){var server=c.getServer();var uuid=c.player.getUuid();server.execute(()->{baseUnits=HaoMeterManager.data(server.getPlayerManager().getPlayer(uuid)).units();baseTick=com.shouyun.jiahaomode.timestop.JiahaoTimeStopManager.getServerTick(server);serverCheck=false;});}
-    private void snapshot(MinecraftClient c){var server=c.getServer();var uuid=c.player.getUuid();server.execute(()->{serverUnits=HaoMeterManager.data(server.getPlayerManager().getPlayer(uuid)).units();long extra=serverUnits-baseUnits-(com.shouyun.jiahaomode.timestop.JiahaoTimeStopManager.getServerTick(server)-baseTick)*5;serverCheck=extra>=195&&extra<=205;});}
+    private void snapshot(MinecraftClient c){var server=c.getServer();var uuid=c.player.getUuid();server.execute(()->{var p=server.getPlayerManager().getPlayer(uuid);serverUnits=HaoMeterManager.data(p).units();serverBuff=!p.getStatusEffects().isEmpty();long extra=serverUnits-baseUnits-(com.shouyun.jiahaomode.timestop.JiahaoTimeStopManager.getServerTick(server)-baseTick)*5;serverCheck=extra>=195&&extra<=205;});}
     private void arm(MinecraftClient c){var server=c.getServer();var uuid=c.player.getUuid();server.execute(()->server.getCommandManager().executeWithPrefix(server.getPlayerManager().getPlayer(uuid).getCommandSource().withLevel(4),"jiahao hao set 99"));stage=4;ticks=0;}
     private void configure(MinecraftClient c){
         c.player.getInventory().selectedSlot=0;ClientPlayNetworking.getSender().sendPacket(new net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket(0));
@@ -129,7 +129,7 @@ public final class HaoSmoke implements ClientModInitializer {
             var enemy=EntityType.ZOMBIE.create(w);enemy.setPosition(4.5,180,.5);enemy.setAiDisabled(true);enemy.setTarget(p);w.spawnEntity(enemy);com.shouyun.jiahaomode.moment.JiahaoMomentManager.combat(p);
         });
     }
-    private static SoundInstance sound()throws Exception{var field=HaoMarchSound.class.getDeclaredField("playing");field.setAccessible(true);return (SoundInstance)field.get(null);}
+    private static SoundInstance sound(){return JiahaoMusicController.soundInstance();}
     private void finish(MinecraftClient c,boolean success){
         if(done)return;done=true;c.setScreen(null);if(c.getServer()!=null)c.getServer().stop(false);c.disconnect();
         try{check(sound()==null&&!JiahaoCinematicController.isCameraActive(),"Disconnect cleanup");Files.writeString(Path.of("hao-smoke-result.txt"),success?"PASSED":"FAILED stage="+stage+" cycle="+cycle+" "+failure);}catch(Exception e){throw new RuntimeException(e);}

@@ -140,7 +140,7 @@ public final class JiahaoCinematicController {
             var p=world.getPlayerByUuid(s.owner);
             if(p!=null&&(!p.isAlive()||p.isRemoved()||!com.shouyun.jiahaomode.state.JiahaoStateManager.isJiahao(p))) {
                 s.playing=false;p.setAttached(JiahaoMomentView.LOCKED,false);iterator.remove();
-                if(s==camera){returning=false;JiahaoCinematicCamera.reset();if(s.type==CinematicType.HAO_BURST)com.shouyun.jiahaomode.client.HaoMarchSound.stop();}
+                if(s==camera){returning=false;JiahaoCinematicCamera.reset();}
             }
         }
     }
@@ -149,7 +149,7 @@ public final class JiahaoCinematicController {
         if(s.type==CinematicType.HAO_BURST&&s.playing&&local(s)&&s.elapsed<240&&world!=null&&ClientPlayNetworking.canSend(HaoReadyPayload.ID))
             ClientPlayNetworking.send(new HaoReadyPayload(s.id,world.getRegistryKey().getValue(),false));
         if(s==camera) {
-            if(s.type==CinematicType.HAO_BURST)com.shouyun.jiahaomode.client.HaoMarchSound.stop();
+
             if(!immediate&&s.playing&&local(s)&&s.elapsed<s.type.duration){returnWeight=cameraWeight();returnBars=barOpacity();returnStart=rawFrame;returning=true;}
             else if(immediate){returning=false;JiahaoCinematicCamera.reset();}
         }
@@ -160,7 +160,7 @@ public final class JiahaoCinematicController {
     public static void stop(boolean immediate) {if(camera!=null&&(camera.playing||returning))finish(camera,immediate);else if(time!=null)finish(time,immediate);publishMovementLock();}
     public static void cleanup() {
         if(world!=null)for(var p:world.getPlayers())p.setAttached(JiahaoMomentView.LOCKED,false);
-        com.shouyun.jiahaomode.client.HaoMarchSound.stop();
+
         ACTORS.clear();ENDED.clear();time=camera=null;world=null;returning=false;rawFrame=0;clientTicks=0;
         JiahaoCinematicCamera.reset();JiahaoCinematicInput.reset();
     }

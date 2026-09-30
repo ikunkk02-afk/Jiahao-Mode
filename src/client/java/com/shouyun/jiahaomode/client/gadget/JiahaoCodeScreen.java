@@ -17,6 +17,10 @@ public final class JiahaoCodeScreen extends Screen implements JiahaoSubtitleRend
     private TextFieldWidget input;
     private int left,top,panelWidth,panelHeight,ticks,lastRevision=-1,historyCursor;
     private Text progress=Text.empty();
+    public void rewardMessage(Text text,boolean override){
+        if(override)terminal.appendMessage(Text.translatable("message.jiahao-mode.buff.override").getString());
+        terminal.appendMessage(text.getString());refresh();
+    }
     public JiahaoCodeScreen(){super(t("title"));}
     private static Text t(String suffix){return Text.translatable("screen.jiahao-mode.code."+suffix);}
     @Override protected void init(){

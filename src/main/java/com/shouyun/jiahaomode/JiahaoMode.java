@@ -35,6 +35,7 @@ public class JiahaoMode implements ModInitializer {
 		com.shouyun.jiahaomode.moment.JiahaoMomentManager.initialize();
 		com.shouyun.jiahaomode.hao.HaoMeterManager.initialize();
 		com.shouyun.jiahaomode.hao.HaoGadgetManager.initialize();
+        com.shouyun.jiahaomode.buff.JiahaoBuffManager.initialize();
 		LOGGER.info("Jiahao transformation system initialized");
 	}
 

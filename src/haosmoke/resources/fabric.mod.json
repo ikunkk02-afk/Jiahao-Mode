@@ -8,6 +8,7 @@
   "entrypoints": {
     "client": [
       "com.shouyun.jiahaomode.test.HaoSmoke",
+      "com.shouyun.jiahaomode.test.GadgetBuffSmoke",
       "com.shouyun.jiahaomode.test.HaoDedicatedClient"
     ],
     "main": [

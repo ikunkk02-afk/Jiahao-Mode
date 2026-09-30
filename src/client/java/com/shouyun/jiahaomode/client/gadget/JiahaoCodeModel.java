@@ -24,6 +24,7 @@ public final class JiahaoCodeModel {
     }
     public void tick(){if(!running)return;elapsed++;if(elapsed%4==0&&elapsed<24)key("output."+(1+random.nextInt(9)));if(elapsed>=24){key("success");running=false;}}
     public int progress(){return running?elapsed*100/24:100;}
+    public void appendMessage(String text){append(new Row(text,false));}
     public boolean running(){return running;}
     public int revision(){return revision;}
     public int outputSize(){return outputSize;}
