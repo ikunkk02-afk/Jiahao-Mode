@@ -27,6 +27,7 @@ public final class JiahaoCinematicController {
         final UUID id,owner;
         final CinematicType type;
         final JiahaoPoseType pose;
+        List<JiahaoPoseType> poses;
         final Vec3d origin;
         final float yaw;
         final int arc;
@@ -34,7 +35,7 @@ public final class JiahaoCinematicController {
         double elapsed;
         boolean playing=true;
         Session(UUID id,UUID owner,CinematicType type,JiahaoPoseType pose,Vec3d origin,float yaw,int arc,int elapsed) {
-            this.id=id;this.owner=owner;this.type=type;this.pose=pose;this.origin=origin;this.yaw=yaw;this.arc=arc;
+            this.id=id;this.owner=owner;this.type=type;this.pose=pose;this.poses=List.of(pose);this.origin=origin;this.yaw=yaw;this.arc=arc;
             timeline=new CinematicTimeline(type.duration);timeline.start(elapsed);this.elapsed=elapsed;playing=elapsed<type.duration;
         }
     }
@@ -60,6 +61,7 @@ public final class JiahaoCinematicController {
     }
     public static void onStateSync(ClientWorld next,JiahaoTimeStatePayload state) {
         useWorld(next);
+        if(state.active()&&state.reason()==com.shouyun.jiahaomode.timestop.TimeStopReason.HAO_BURST){if(time!=null)finish(time,true);time=null;publishMovementLock();return;}
         if(!state.active()||!state.cinematic()) {if(time!=null)finish(time,false);time=null;publishMovementLock();return;}
         if(time==null||!state.session().equals(time.id)) {
             if(time!=null)finish(time,true);
@@ -71,6 +73,23 @@ public final class JiahaoCinematicController {
         if(local(time)&&time.playing&&MinecraftClient.getInstance().getCameraEntity()!=MinecraftClient.getInstance().player) {
             if(ClientPlayNetworking.canSend(JiahaoQuotePlaybackFailedPayload.ID))ClientPlayNetworking.send(new JiahaoQuotePlaybackFailedPayload(time.id));
             finish(time,true);
+        }
+        publishMovementLock();
+    }
+    public static void onBurstSync(HaoBurstPayload p) {
+        var client=MinecraftClient.getInstance();useWorld(client.world);
+        if(world==null||!world.getRegistryKey().getValue().equals(p.dimension()))return;
+        var old=ACTORS.get(p.player());
+        if(!p.active()) {
+            if(old!=null&&old.id.equals(p.session()))finish(old,true);
+            remember(p.session());publishMovementLock();return;
+        }
+        if(p.elapsed()<0||p.elapsed()>=240||ENDED.containsKey(p.session()))return;
+        if(old!=null&&old.id.equals(p.session()))old.timeline.sync(p.elapsed());
+        else {
+            if(old!=null)finish(old,true);
+            var session=new Session(p.session(),p.player(),CinematicType.HAO_BURST,p.poses().getFirst(),p.origin(),p.yaw(),0,p.elapsed());
+            session.poses=p.poses();start(session);
         }
         publishMovementLock();
     }
@@ -114,19 +133,23 @@ public final class JiahaoCinematicController {
         if(world==null)return;
         if(camera!=null&&camera.playing&&camera.type==CinematicType.RANDOM_HAO_MOMENT
                 &&(client.currentScreen!=null||client.getCameraEntity()!=client.player||!JiahaoClientConfig.enableRandomJiahaoMoments))decline(camera);
+        if(camera!=null&&camera.playing&&camera.type==CinematicType.HAO_BURST&&client.getCameraEntity()!=client.player)finish(camera,true);
         var iterator=ACTORS.values().iterator();
         while(iterator.hasNext()) {
             var s=iterator.next();
             var p=world.getPlayerByUuid(s.owner);
             if(p!=null&&(!p.isAlive()||p.isRemoved()||!com.shouyun.jiahaomode.state.JiahaoStateManager.isJiahao(p))) {
                 s.playing=false;p.setAttached(JiahaoMomentView.LOCKED,false);iterator.remove();
-                if(s==camera){returning=false;JiahaoCinematicCamera.reset();}
+                if(s==camera){returning=false;JiahaoCinematicCamera.reset();if(s.type==CinematicType.HAO_BURST)com.shouyun.jiahaomode.client.HaoMarchSound.stop();}
             }
         }
     }
     private static void finish(Session s,boolean immediate) {
         remember(s.id);
+        if(s.type==CinematicType.HAO_BURST&&s.playing&&local(s)&&s.elapsed<240&&world!=null&&ClientPlayNetworking.canSend(HaoReadyPayload.ID))
+            ClientPlayNetworking.send(new HaoReadyPayload(s.id,world.getRegistryKey().getValue(),false));
         if(s==camera) {
+            if(s.type==CinematicType.HAO_BURST)com.shouyun.jiahaomode.client.HaoMarchSound.stop();
             if(!immediate&&s.playing&&local(s)&&s.elapsed<s.type.duration){returnWeight=cameraWeight();returnBars=barOpacity();returnStart=rawFrame;returning=true;}
             else if(immediate){returning=false;JiahaoCinematicCamera.reset();}
         }
@@ -137,13 +160,15 @@ public final class JiahaoCinematicController {
     public static void stop(boolean immediate) {if(camera!=null&&(camera.playing||returning))finish(camera,immediate);else if(time!=null)finish(time,immediate);publishMovementLock();}
     public static void cleanup() {
         if(world!=null)for(var p:world.getPlayers())p.setAttached(JiahaoMomentView.LOCKED,false);
+        com.shouyun.jiahaomode.client.HaoMarchSound.stop();
         ACTORS.clear();ENDED.clear();time=camera=null;world=null;returning=false;rawFrame=0;clientTicks=0;
         JiahaoCinematicCamera.reset();JiahaoCinematicInput.reset();
     }
     private static void publishMovementLock() {
         if(world==null)return;
         var view=world.getAttachedOrElse(JiahaoTimeView.CLIENT_VIEW,JiahaoTimeView.INACTIVE);
-        boolean locked=time!=null&&time.playing&&time.elapsed<100;
+        var frozenActor=ACTORS.get(view.owner());
+        boolean locked=time!=null&&time.playing&&time.elapsed<100 || frozenActor!=null&&frozenActor.playing&&frozenActor.type==CinematicType.HAO_BURST;
         if(view.cinematicLocked()!=locked)world.setAttached(JiahaoTimeView.CLIENT_VIEW,new JiahaoTimeView(view.active(),view.owner(),view.remainingTicks(),locked));
         for(var s:ACTORS.values()) {
             var p=world.getPlayerByUuid(s.owner);if(p==null)continue;
@@ -158,7 +183,16 @@ public final class JiahaoCinematicController {
     public static boolean canUseCamera(CinematicType type) {return !isCameraActive()||camera.type.priority<=type.priority;}
     public static CinematicType cameraType() {return isCameraActive()?camera.type:null;}
     public static boolean isPoseActive(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return p.getWorld()==world&&s!=null&&s.playing;}
-    public static JiahaoPoseType poseType(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?JiahaoPoseType.DEFAULT:s.pose;}
+    public static JiahaoPoseType poseType(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?JiahaoPoseType.DEFAULT:s.poses.get(com.shouyun.jiahaomode.hao.HaoBurstTimeline.index(s.elapsed,s.poses.size()));}
+    public static boolean isBurstPose(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s!=null&&s.type==CinematicType.HAO_BURST;}
+    public static double poseDegrees(PlayerEntity p,int part,int axis) {
+        var s=ACTORS.get(p.getUuid());if(s==null)return JiahaoPoseType.DEFAULT.degrees(part,axis);
+        if(s.type!=CinematicType.HAO_BURST)return s.pose.degrees(part,axis);
+        int index=com.shouyun.jiahaomode.hao.HaoBurstTimeline.index(s.elapsed,s.poses.size());
+        var next=s.poses.get(index);var previous=s.poses.get(Math.max(0,index-1));
+        double weight=com.shouyun.jiahaomode.hao.HaoBurstTimeline.transition(s.elapsed,s.poses.size());
+        return CinematicTimeline.lerp(previous.degrees(part,axis),next.degrees(part,axis),weight);
+    }
     public static double poseElapsed(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?0:s.elapsed;}
     public static double poseDuration(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?100:s.type.duration;}
     public static float yaw(PlayerEntity p) {var s=ACTORS.get(p.getUuid());return s==null?p.bodyYaw:s.yaw;}
@@ -173,6 +207,7 @@ public final class JiahaoCinematicController {
         if(camera==null)return 0;
         if(returning)return returnWeight*(1-CinematicTimeline.smooth((rawFrame-returnStart)/3));
         double t=camera.elapsed;
+        if(camera.type==CinematicType.HAO_BURST)return com.shouyun.jiahaomode.hao.HaoBurstTimeline.cameraWeight(t);
         return camera.type==CinematicType.TIME_STOP?CinematicTimeline.weight(t):CinematicTimeline.smooth((t-6)/6)*(1-CinematicTimeline.smooth((t-56)/4));
     }
     public static double barOpacity() {
@@ -182,10 +217,25 @@ public final class JiahaoCinematicController {
     }
     public static double orbitAngle(double ticks) {
         var s=selected();if(s==null)return 0;
+        if(s.type==CinematicType.HAO_BURST)return burstOrbit(ticks,0);
         if(s.type==CinematicType.TIME_STOP)return CinematicTimeline.angle(ticks)+(s.pose==JiahaoPoseType.RUNNING_LOOK_BACK?135:0);
         double end=s.pose==JiahaoPoseType.RUNNING_LOOK_BACK?135:s.arc*.5;
         return CinematicTimeline.lerp(end-s.arc,end,CinematicTimeline.cubic((ticks-12)/40));
     }
-    public static double orbitRadius(double ticks) {return cameraType()==CinematicType.RANDOM_HAO_MOMENT?CinematicTimeline.lerp(3.3,2.5,CinematicTimeline.smooth((ticks-12)/40)):CinematicTimeline.radius(ticks);}
-    public static double orbitHeight(double ticks) {return cameraType()==CinematicType.RANDOM_HAO_MOMENT?1.5:CinematicTimeline.height(ticks);}
+    public static double orbitRadius(double ticks) {if(cameraType()==CinematicType.HAO_BURST)return burstOrbit(ticks,1);return cameraType()==CinematicType.RANDOM_HAO_MOMENT?CinematicTimeline.lerp(3.3,2.5,CinematicTimeline.smooth((ticks-12)/40)):CinematicTimeline.radius(ticks);}
+    public static double orbitHeight(double ticks) {if(cameraType()==CinematicType.HAO_BURST)return burstOrbit(ticks,2);return cameraType()==CinematicType.RANDOM_HAO_MOMENT?1.5:CinematicTimeline.height(ticks);}
+    private static double preferred(JiahaoPoseType pose,int component) {
+        if(component==0)return switch(pose){case RUNNING_FREEZE->100;case RUNNING_LOOK_BACK->210;case POINT_SKY->30;case THINKING_HAO->-25;case RAIN_EMBRACE->65;default->95;};
+        if(component==1)return switch(pose){case THINKING_HAO->2.3;case RAIN_EMBRACE->4.5;default->3.3;};
+        return switch(pose){case RUNNING_FREEZE,POINT_SKY->.75;case RAIN_EMBRACE->1.8;default->1.4;};
+    }
+    private static double burstOrbit(double ticks,int component) {
+        var s=selected();if(s==null)return 0;
+        int index=com.shouyun.jiahaomode.hao.HaoBurstTimeline.index(ticks,s.poses.size());
+        double start=com.shouyun.jiahaomode.hao.HaoBurstTimeline.poseStart(index,s.poses.size());
+        double length=(170-14)/(double)s.poses.size();
+        double from=preferred(s.poses.get(Math.max(0,index-1)),component),to=preferred(s.poses.get(index),component);
+        if(component==0){if(index==0)from-=30;to=from+net.minecraft.util.math.MathHelper.wrapDegrees(to-from);}
+        return CinematicTimeline.lerp(from,to,CinematicTimeline.smooth((ticks-start)/length));
+    }
 }

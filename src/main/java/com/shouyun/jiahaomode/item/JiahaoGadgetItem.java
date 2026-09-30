@@ -12,6 +12,8 @@ import net.minecraft.world.World;
 public final class JiahaoGadgetItem extends Item {
     public JiahaoGadgetItem() { super(new Settings().maxCount(1)); }
     @Override public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
+        if(user instanceof net.minecraft.server.network.ServerPlayerEntity p)
+            com.shouyun.jiahaomode.hao.HaoGadgetManager.open(p,user.getStackInHand(hand).isOf(ModItems.JIAHAO_CODE_EDITOR),hand);
         return TypedActionResult.success(user.getStackInHand(hand), world.isClient());
     }
 }

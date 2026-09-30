@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "jiahao-hao-smoke",
+  "version": "1.0.0",
+  "name": "Isolated Hao client verification",
+  "environment": "*",
+  "license": "MIT",
+  "entrypoints": {
+    "client": [
+      "com.shouyun.jiahaomode.test.HaoSmoke",
+      "com.shouyun.jiahaomode.test.HaoDedicatedClient"
+    ],
+    "main": [
+      "com.shouyun.jiahaomode.test.HaoDedicatedServer"
+    ]
+  },
+  "depends": {
+    "jiahao-mode": "*",
+    "fabric-api": "*"
+  },
+  "mixins": [
+    "hao-smoke.mixins.json"
+  ]
+}

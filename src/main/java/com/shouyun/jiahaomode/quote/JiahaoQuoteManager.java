@@ -73,6 +73,7 @@ public final class JiahaoQuoteManager {
  }
  public static boolean emit(ServerPlayerEntity p,JiahaoQuoteCategory category,UUID session){
   if(!valid(p))return false;
+  if(com.shouyun.jiahaomode.hao.HaoMeterManager.isBursting(p)&&category!=HAO_BURST)return false;
   Runtime r=runtime(p.getServer());State s=r.active.get(p.getUuid());if(s==null)return false;
   History h=r.histories.computeIfAbsent(p.getUuid(),id->new History());long t=now(p);
   boolean special=category.priority>=30;
@@ -88,7 +89,7 @@ public final class JiahaoQuoteManager {
  }
  /** Scripted IDs are server-only and never selected from a random pool. Equal-priority scripts may replace each other. */
  public static boolean emitFixed(ServerPlayerEntity p,Identifier id){
-  if(!valid(p)||!JiahaoQuoteRegistry.isFixed(id))return false;
+  if(!valid(p)||com.shouyun.jiahaomode.hao.HaoMeterManager.isBursting(p)||!JiahaoQuoteRegistry.isFixed(id))return false;
   track(p);Runtime r=runtime(p.getServer());State s=r.active.get(p.getUuid());
   History h=r.histories.computeIfAbsent(p.getUuid(),ignored->new History());
   return publish(p,s,r,h,JiahaoQuoteRegistry.get(id),null,now(p));
@@ -103,6 +104,15 @@ public final class JiahaoQuoteManager {
    }
   }
   return true;
+ }
+ public static void beginHaoBurst(ServerPlayerEntity p) {
+  track(p);var r=runtime(p.getServer());var s=r.active.get(p.getUuid());if(s!=null){cancel(p,s,r);s.session=null;s.endAt=-1;s.cueSent=true;}
+ }
+ public static void haoBurstQuote(ServerPlayerEntity p,UUID session,int number) {
+  if(!valid(p)||!session.equals(com.shouyun.jiahaomode.hao.HaoMeterManager.sessionId(p)))return;
+  track(p);var r=runtime(p.getServer());var s=r.active.get(p.getUuid());var h=r.histories.computeIfAbsent(p.getUuid(),k->new History());
+  var quote=JiahaoQuoteRegistry.get(com.shouyun.jiahaomode.JiahaoMode.id("quote/hao_burst."+number));
+  if(quote!=null)publish(p,s,r,h,quote,session,now(p));
  }
  public static void timeStarted(ServerPlayerEntity p,UUID session,boolean cinematic){
   track(p);State s=runtime(p.getServer()).active.get(p.getUuid());if(s==null)return;

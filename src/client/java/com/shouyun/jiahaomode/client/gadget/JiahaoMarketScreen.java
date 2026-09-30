@@ -19,8 +19,8 @@ public final class JiahaoMarketScreen extends Screen implements JiahaoSubtitleRe
     @Override protected void init(){
         panelWidth=Math.min(420,width-16);panelHeight=Math.min(258,height-52);left=(width-panelWidth)/2;top=Math.max(8,(height-panelHeight-36)/2);
         chartLeft=left+35;chartTop=top+55;chartWidth=panelWidth-49;chartHeight=Math.max(6,panelHeight-119);
-        addDrawableChild(ButtonWidget.builder(t("buy"),button->{message=t(market.buy());messageUntil=ticks+60;}).dimensions(left+14,top+panelHeight-36,64,20).build());
-        addDrawableChild(ButtonWidget.builder(t("sell"),button->{message=t(market.sell());messageUntil=ticks+60;}).dimensions(left+84,top+panelHeight-36,64,20).build());
+        addDrawableChild(ButtonWidget.builder(t("buy"),button->{HaoGadgetClient.begin(com.shouyun.jiahaomode.network.HaoGadgetPayload.Action.BUY);message=t(market.buy());messageUntil=ticks+60;}).dimensions(left+14,top+panelHeight-36,64,20).build());
+        addDrawableChild(ButtonWidget.builder(t("sell"),button->{HaoGadgetClient.begin(com.shouyun.jiahaomode.network.HaoGadgetPayload.Action.SELL);message=t(market.sell());messageUntil=ticks+60;}).dimensions(left+84,top+panelHeight-36,64,20).build());
         refreshChart();
     }
     private static String money(double price){return String.format(Locale.ROOT,"%.2f",price);}
@@ -60,5 +60,6 @@ public final class JiahaoMarketScreen extends Screen implements JiahaoSubtitleRe
     }
     @Override public boolean shouldPause(){return false;}
     @Override public void renderBackground(DrawContext d,int mouseX,int mouseY,float delta){} // Custom background is drawn before the content.
+    @Override public void removed(){HaoGadgetClient.close();super.removed();}
     public JiahaoMarketModel model(){return market;}
 }

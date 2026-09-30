@@ -176,6 +176,7 @@ public final class JiahaoDodgeManager {
         for (var observer : p.getServerWorld().getPlayers()) {
             if ((observer == p || PlayerLookup.tracking(p).contains(observer)) && ServerPlayNetworking.canSend(observer, packet.getId())) ServerPlayNetworking.send(observer, packet);
         }
+        com.shouyun.jiahaomode.hao.HaoMeterManager.gain(p,12);
         JiahaoQuoteManager.perfectDodge(p);
         return false;
     }

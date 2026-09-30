@@ -105,7 +105,7 @@ public final class JiahaoTimeStopManager {
 			DimensionRuntime dimension = dimensionOrNull(world);
 			TimeStopState state = dimension == null ? null : dimension.active;
 			return state != null && state.cinematic && state.owner.equals(entity.getUuid())
-					&& getServerTick(world.getServer()) - state.startTick < CINEMATIC_TICKS;
+					&& getServerTick(world.getServer()) - state.startTick < (state.reason==TimeStopReason.HAO_BURST?240:CINEMATIC_TICKS);
 		}
 		JiahaoTimeView view = entity.getWorld().getAttachedOrElse(JiahaoTimeView.CLIENT_VIEW, JiahaoTimeView.INACTIVE);
 		return view.active() && view.cinematicLocked() && entity.getUuid().equals(view.owner());
@@ -118,7 +118,15 @@ public final class JiahaoTimeStopManager {
 				&& !player.getWorld().isSpaceEmpty(player, player.getBoundingBox().offset(0, -0.05, 0));
 	}
 
-	public static boolean startTimeStop(ServerPlayerEntity player) {
+	public static UUID getSession(ServerWorld world) {
+        var d=dimensionOrNull(world);return d==null||d.active==null?null:d.active.session;
+    }
+    public static TimeStopReason getReason(ServerWorld world) {
+        var d=dimensionOrNull(world);return d==null||d.active==null?TimeStopReason.MANUAL:d.active.reason;
+    }
+    public static boolean startTimeStop(ServerPlayerEntity player) { return start(player,TimeStopReason.MANUAL); }
+    public static boolean startHaoBurst(ServerPlayerEntity player) { return start(player,TimeStopReason.HAO_BURST); }
+    private static boolean start(ServerPlayerEntity player, TimeStopReason reason) {
 		ServerWorld world = player.getServerWorld();
 		checkThread(world.getServer());
 		if (!JiahaoStateManager.isJiahao(player)) {
@@ -132,7 +140,7 @@ public final class JiahaoTimeStopManager {
 			message(player, "already_stopped");
 			return false;
 		}
-		if (runtime.cooldowns.getOrDefault(player.getUuid(), 0L) > runtime.tick) {
+		if (reason==TimeStopReason.MANUAL && runtime.cooldowns.getOrDefault(player.getUuid(), 0L) > runtime.tick) {
 			message(player, "cooldown");
 			return false;
 		}
@@ -140,8 +148,8 @@ public final class JiahaoTimeStopManager {
 		com.shouyun.jiahaomode.moment.JiahaoMomentManager.cancelWorld(world);
 		var pose = com.shouyun.jiahaomode.cinematic.JiahaoPoseType.timeStop(runtime.lastPoses.get(player.getUuid()), bound -> player.getRandom().nextInt(bound));
 		runtime.lastPoses.put(player.getUuid(), pose);
-		dimension.active = new TimeStopState(player.getUuid(), runtime.tick, runtime.tick + MAX_DURATION_TICKS,
-				world.getTime(), world.getTimeOfDay(), isStableForCinematic(player), player.getPos(), player.getYaw(), pose);
+		dimension.active = new TimeStopState(player.getUuid(), runtime.tick, runtime.tick + (reason==TimeStopReason.HAO_BURST?240:MAX_DURATION_TICKS),
+				world.getTime(), world.getTimeOfDay(), isStableForCinematic(player), player.getPos(), player.getYaw(), pose, reason);
 		if (dimension.active.cinematic) {
 			player.setVelocity(Vec3d.ZERO); player.velocityModified = true;
 			player.stopUsingItem(); player.setSprinting(false);
@@ -155,7 +163,10 @@ public final class JiahaoTimeStopManager {
 		world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
 				SoundCategory.PLAYERS, 0.8F, 0.65F);
 		syncWorld(world);
-		JiahaoQuoteManager.timeStarted(player, dimension.active.session, dimension.active.cinematic);
+		if(reason==TimeStopReason.MANUAL) {
+            JiahaoQuoteManager.timeStarted(player, dimension.active.session, dimension.active.cinematic);
+            com.shouyun.jiahaomode.hao.HaoMeterManager.gain(player,8);
+        }
 		JiahaoMode.LOGGER.info("Jiahao time stop started by {} in {}", player.getGameProfile().getName(), world.getRegistryKey().getValue());
 		return true;
 	}
@@ -191,7 +202,8 @@ public final class JiahaoTimeStopManager {
 		for (ServerPlayerEntity player : world.getPlayers()) message(player, "ended");
 		ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(active.owner);
 		if (owner != null) {
-			JiahaoQuoteManager.timeEnded(owner, active.session, (reason.equals("duration elapsed") || reason.equals("owner toggled or left form")) && JiahaoStateManager.isJiahao(owner));
+			if(active.reason==TimeStopReason.HAO_BURST) com.shouyun.jiahaomode.hao.HaoMeterManager.ended(owner);
+            else JiahaoQuoteManager.timeEnded(owner, active.session, (reason.equals("duration elapsed") || reason.equals("owner toggled or left form")) && JiahaoStateManager.isJiahao(owner));
 			if (owner.getServerWorld() != world) message(owner, "ended");
 			world.playSound(null, owner.getX(), owner.getY(), owner.getZ(), SoundEvents.BLOCK_BEACON_DEACTIVATE,
 					SoundCategory.PLAYERS, 0.4F, 1.3F);
@@ -215,7 +227,7 @@ public final class JiahaoTimeStopManager {
 			} else if (runtime.tick >= active.endTick) {
 				stop(world, "duration elapsed");
 			} else {
-				if (active.cinematic && (runtime.tick - active.startTick >= CINEMATIC_TICKS
+				if (active.reason==TimeStopReason.MANUAL && active.cinematic && (runtime.tick - active.startTick >= CINEMATIC_TICKS
 						|| !isStableForCinematic(owner) || owner.getPos().squaredDistanceTo(active.origin) > 0.0025)) {
 					active.cinematic = false;
 					JiahaoQuoteManager.cinematicStopped(owner, active.session);
@@ -270,7 +282,8 @@ public final class JiahaoTimeStopManager {
 					state == null ? NO_SESSION : state.session,
 					state == null ? 0 : (int) (getServerTick(world.getServer()) - state.startTick),
 					state != null && state.cinematic, state == null ? Vec3d.ZERO : state.origin, state == null ? 0 : state.yaw,
-					state == null ? com.shouyun.jiahaomode.cinematic.JiahaoPoseType.DEFAULT : state.pose));
+					state == null ? com.shouyun.jiahaomode.cinematic.JiahaoPoseType.DEFAULT : state.pose,
+                    state == null ? TimeStopReason.MANUAL : state.reason));
 		}
 		player.networkHandler.sendPacket(new WorldTimeUpdateS2CPacket(world.getTime(), world.getTimeOfDay(),
 				world.getGameRules().getBoolean(net.minecraft.world.GameRules.DO_DAYLIGHT_CYCLE)));
@@ -305,13 +318,14 @@ public final class JiahaoTimeStopManager {
 	}
 	private static final class TimeStopState {
 		final UUID owner, session = UUID.randomUUID();
+        final TimeStopReason reason;
 		final long startTick, endTick, gameTime, dayTime;
 		final Vec3d origin;
 		final float yaw;
 		final com.shouyun.jiahaomode.cinematic.JiahaoPoseType pose;
 		boolean cinematic;
-		TimeStopState(UUID owner, long startTick, long endTick, long gameTime, long dayTime, boolean cinematic, Vec3d origin, float yaw, com.shouyun.jiahaomode.cinematic.JiahaoPoseType pose) {
-			this.owner = owner; this.startTick = startTick; this.endTick = endTick;
+		TimeStopState(UUID owner, long startTick, long endTick, long gameTime, long dayTime, boolean cinematic, Vec3d origin, float yaw, com.shouyun.jiahaomode.cinematic.JiahaoPoseType pose, TimeStopReason reason) {
+			this.reason=reason; this.owner = owner; this.startTick = startTick; this.endTick = endTick;
 			this.gameTime = gameTime; this.dayTime = dayTime; this.cinematic = cinematic; this.origin = origin; this.yaw = yaw; this.pose = pose;
 		}
 	}

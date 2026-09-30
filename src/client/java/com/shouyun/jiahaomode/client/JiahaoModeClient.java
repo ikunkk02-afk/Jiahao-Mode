@@ -16,5 +16,7 @@ public class JiahaoModeClient implements ClientModInitializer {
 		JiahaoDodgeClientController.initialize();
 		JiahaoDodgeKeyBindings.initialize();
 		JiahaoMomentClient.initialize();
+		HaoClient.initialize();
+		com.shouyun.jiahaomode.client.gadget.HaoGadgetClient.initialize();
 	}
 }

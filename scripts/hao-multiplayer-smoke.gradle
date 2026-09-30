@@ -1,0 +1,48 @@
+// Export the configured Loom launch commands for one isolated server and two real clients.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('haoSmoke')
+        smoke.java.setSrcDirs(['src/haosmoke/java'])
+        smoke.resources.setSrcDirs(['src/haosmoke/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-hao-smoke') { sourceSet smoke }
+        def role = project.findProperty('haoRole') ?: 'actor'
+        def isolatedDirectory = project.file(role == 'server' ? 'build/run/haoDedicated' : "build/run/hao${role.capitalize()}")
+        loom.runs.server {
+            runDir 'build/run/haoDedicated'
+            programArgs 'nogui'
+        }
+        loom.runs.client {
+            runDir "build/run/hao${role.capitalize()}"
+            programArgs '--username', role == 'observer' ? 'HaoObserver' : 'HaoActor',
+                    '--quickPlayMultiplayer', '127.0.0.1:25581', '--width', '960', '--height', '540'
+        }
+        ['runServer', 'runClient'].each { name ->
+            tasks.named(name) { dependsOn tasks.named('haoSmokeClasses'); classpath += smoke.output }
+        }
+        tasks.register('exportHaoLaunch') {
+            dependsOn tasks.named('haoSmokeClasses'), tasks.named('configureLaunch'), tasks.named('generateDLIConfig')
+            def output = project.file("build/verification/hao-${role}-launch.json")
+            def originalConfig = project.file('.gradle/loom-cache/launch.cfg')
+            def isolatedConfig = project.file("build/verification/hao-${role}-launch.cfg")
+            def task = tasks.named(role == 'server' ? 'runServer' : 'runClient').get()
+            def launchSpec = [
+                executable: task.javaLauncher.get().executablePath.asFile.absolutePath,
+                directory: isolatedDirectory.absolutePath,
+                arguments: ['-Djiahao.hao.dedicated=true'] + task.allJvmArgs.findAll { !it.startsWith('@') } + ['-classpath', task.classpath.asPath, task.mainClass.get()] +
+                    (role == 'server' ? ['nogui'] : ['--username', role == 'observer' ? 'HaoObserver' : 'HaoActor',
+                        '--quickPlayMultiplayer', '127.0.0.1:25581', '--width', '960', '--height', '540'])
+            ]
+            doLast {
+                output.parentFile.mkdirs()
+                // Other smoke tasks may regenerate Loom's shared config after this export.
+                isolatedConfig.text = originalConfig.text
+                launchSpec.arguments = launchSpec.arguments.collect {
+                    it.startsWith('-Dfabric.dli.config=') ? "-Dfabric.dli.config=${isolatedConfig.absolutePath}".toString() : it
+                }
+                output.text = groovy.json.JsonOutput.toJson(launchSpec)
+            }
+        }
+    }
+}

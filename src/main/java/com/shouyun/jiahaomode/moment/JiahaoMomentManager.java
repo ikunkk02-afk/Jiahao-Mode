@@ -97,7 +97,7 @@ public final class JiahaoMomentManager {
     /** Called only when the precomputed server deadline arrives. Client cannot choose a deadline. */
     private static void propose(ServerPlayerEntity p,State s) {
         schedule(p,s);
-        if(!s.enabled||s.active!=null||!safe(p)||!JiahaoQuoteManager.canStartMoment(p)
+        if(!s.enabled||s.active!=null||com.shouyun.jiahaomode.hao.HaoMeterManager.isPending(p)||!safe(p)||!JiahaoQuoteManager.canStartMoment(p)
             ||!ServerPlayNetworking.canSend(p,JiahaoMomentProposalPayload.ID)||!ServerPlayNetworking.canSend(p,JiahaoMomentStatePayload.ID))return;
         s.proposal=UUID.randomUUID();s.proposalUntil=now(p)+20;
         ServerPlayNetworking.send(p,new JiahaoMomentProposalPayload(s.proposal,p.getWorld().getRegistryKey().getValue()));
@@ -107,8 +107,9 @@ public final class JiahaoMomentManager {
         if(!response.ready()&&s.active!=null&&s.active.id.equals(response.session())){cancel(p,s);return;}
         if(s.proposal==null||!s.proposal.equals(response.session()))return;
         UUID proposal=s.proposal;s.proposal=null;
-        if(!response.ready()||now(p)>=s.proposalUntil||!s.enabled||s.active!=null||!safe(p)||!JiahaoQuoteManager.canStartMoment(p))return;
+        if(!response.ready()||now(p)>=s.proposalUntil||!s.enabled||s.active!=null||com.shouyun.jiahaomode.hao.HaoMeterManager.isPending(p)||!safe(p)||!JiahaoQuoteManager.canStartMoment(p))return;
         s.active=new Session(p,proposal,now(p));
+        com.shouyun.jiahaomode.hao.HaoMeterManager.gain(p,4);
         p.setVelocity(Vec3d.ZERO);p.velocityModified=true;p.stopUsingItem();p.setSprinting(false);
         p.networkHandler.requestTeleport(p.getX(),p.getY(),p.getZ(),p.getYaw(),p.getPitch());
         send(p,s.active,true);

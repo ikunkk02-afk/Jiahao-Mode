@@ -78,6 +78,8 @@ public final class JiahaoMomentTests implements FabricGameTest {
         boolean tick(){
             try {
                 var p=actor.player();
+                // Keep this pre-existing long scheduler fixture focused on random moments. Hao has separate integration coverage.
+                if(com.shouyun.jiahaomode.hao.HaoMeterManager.isPending(p))com.shouyun.jiahaomode.hao.HaoMeterManager.set(p,0);
                 if(stage==0&&now()<due){check(!JiahaoMomentManager.isLocked(p),"No early trigger");return false;}
                 if(stage==0){ready();started=now();worldTime=c.getWorld().getTime();observerAge=observer.player().age;stage=1;return false;}
                 long age=now()-started;

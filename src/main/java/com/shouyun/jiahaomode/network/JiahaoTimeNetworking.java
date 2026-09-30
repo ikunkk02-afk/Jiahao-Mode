@@ -16,6 +16,7 @@ public final class JiahaoTimeNetworking {
 				(payload, context) -> handleToggle(context.player()));
 	}
 	public static void handleToggle(ServerPlayerEntity player) {
+		if (com.shouyun.jiahaomode.hao.HaoMeterManager.isBursting(player)) return;
 		if (JiahaoTimeStopManager.isOwner(player)) JiahaoTimeStopManager.stopTimeStop(player);
 		else JiahaoTimeStopManager.startTimeStop(player);
 	}

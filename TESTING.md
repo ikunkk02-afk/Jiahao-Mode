@@ -648,3 +648,73 @@ offline-mode 聊天验证提示仍存在，未阻止本轮构建、资源显示�
 - `build/run/phase7{Dedicated,Actor,Observer}/*-result.txt`、`build/run/phase7Actor/screenshots/`
 
 TEST 1–24 的对应关系和实现细节见 [STAGE7.md](STAGE7.md)。人工仍需以自己使用的角色皮肤和画面设置确认 Pose 观感、镜头构图、三个 16×16 图标及两个 GUI 的视觉偏好。
+
+
+## 第八阶段（2026-09-30）：豪气与强制爆发
+
+本节为本轮实际验证；前文保留历史验收结果。机制和完整中英语录见 [HAO_METER.md](HAO_METER.md)。
+
+### 构建与服务端
+
+`gradlew.bat build` 最终 **BUILD SUCCESSFUL**，23 个必需 GameTest 全通过，五组独立检查通过（冻结时钟、电影时间轴、Pose、道具模型、豪气时间轴）。新增测试覆盖：附件 NBT 编解码、普通死亡重生复制、加载未完成标记后的登录清零、普通切维度保留数值及增长锁、每秒增长、敌对死亡 +6、Perfect Dodge +12、手动时停 +8、随机瞬间 +4、道具时序/令牌/冷却/换手失效、满值 pending、容器推迟、随机/手动演出冲突、旁观者与晚加入同步、240 Tick 结束、100 Tick 增长锁、死亡清理、第二位玩家排队以及合法/伪造的异常取消。
+
+关键验收在同一真实服务端场景中以 20% 血量、战斗标记和 targeting zombie 三个条件同时存在测试：`safe` 仍成立。96 豪气通过实际 `allowDamage` Perfect Dodge 事件补满，当前闪避结束后少于 25 Tick 自动进入爆发，无脱战/回血等待。普通随机窗口测试单独重置其测试玩家的豪气，避免长达 100 秒的旧随机测试被本阶段新增的必然爆发接管。
+
+### 真实 runClient
+
+```powershell
+.\gradlew.bat --no-configuration-cache -I scripts/hao-smoke.gradle runClient
+```
+
+在 `build/run/haoSmoke` 的隔离存档实际通过 `/jiahao hao set 99` 启动完整演出，无按键触发。测试模组检查真实 renderer、网络和音频引擎；正常完整演出、解除形态、切维度、死亡四个周期全部 PASSED。实际右键 Market/Code、点击 BUY、输入假命令，两个完成事件均得到服务端 +2。R 无法取消；四件盔甲跟随 3–5 个 Pose，2–4 条字幕按时间出现，镜头运动、雨/云时钟冻结、原视角/FOV 不变，结束后声音/输入/镜头/冻结清理。重复/落后开始包不会重启镜头或音乐，已结束会话的包不会重播。
+
+截图在 GameRenderer 完整帧末尾保存，已检查豪气条与字幕、原版状态栏分开显示。测试使用生存低血量、靶向僵尸，并从资源 OGG 启动真实 SoundManager 实例，不用系统文件回退。测试存档上次死亡后，测试入口先正常发送重生请求，再开始下一轮；避免将已死亡玩家当作准备完成。
+
+### Dedicated Server + 两个独立客户端
+
+```powershell
+.\gradlew.bat --no-configuration-cache -I scripts/hao-multiplayer-smoke.gradle -PhaoRole=server exportHaoLaunch
+.\gradlew.bat --no-configuration-cache -I scripts/hao-multiplayer-smoke.gradle -PhaoRole=actor exportHaoLaunch
+.\gradlew.bat --no-configuration-cache -I scripts/hao-multiplayer-smoke.gradle -PhaoRole=observer exportHaoLaunch
+python scripts/hao-multiplayer-smoke.py
+```
+
+协调器结果 **HAO DEDICATED + TWO CLIENTS ALL PASSED**，server/actor/observer 三结果均 PASSED，客户端正常退出，服务器正常 stop 保存。只绑定 `127.0.0.1:25581`，三个角色各有独立 JVM/目录/启动配置。
+
+发动者镜头、输入锁和本人音乐正常；旁观者看到同一多 Pose 和头顶语录，镜头/输入/音乐不被接管。两个客户端天气动画时钟固定，服务端世界时钟固定，12 秒后恢复。Dedicated 实际启动及完整演出证明公共初始化不会加载客户端声音/渲染类。测试模组和专用 Mixin 不进入发布 JAR。
+
+### TEST 1–25 映射
+
+| 附件 TEST | 实际证据 |
+|---|---|
+| 1–2 形态 HUD 显示/隐藏 | 真客户端截图确认显示；渲染按形态门控，解除形态周期通过；用户可复核 F1 和不同 GUI 比例 |
+| 3 增长 | 服务端精确 Tick 检查；客户端 set 99 自然补满 |
+| 4 Perfect Dodge | 实际伤害取消 +12、MAX、闪避结束自动启动 |
+| 5–6 满值/无按键 | GameTest 和真实 set 99；战斗/低血量/敌人均无阻碍 |
+| 7–8 世界/天气 | 服务端世界/实体固定、两个客户端天气时钟固定 |
+| 9–10 音乐/资源 | 真 SoundManager isPlaying；资源流式 OGG，代码扫描无 FLAC/CloudMusic 读取 |
+| 11–13 多 Pose/不重复/静止 | 服务器序列一致、千组随机种子无重复、四 Tick 后全权重静止，真实多模型渲染 |
+| 14 环绕 | 真渲染帧相机坐标变化；继续复用已有碰撞保护 |
+| 15 语录 | 完整客户端 2–4 句；时间轴 50 Tick 显示区间无重叠 |
+| 16–19 正常结束 | 音量曲线端点与共享曲线测试；真客户端声音/镜头/时间恢复；服务端归零 |
+| 20–21 死亡 | 真客户端周期及服务端死亡清理 |
+| 22 手动时停 | 等完整 300 Tick，再跳过手动冷却启动爆发，无嵌套 |
+| 23 Random Moment | 先完成 60 Tick 随机演出，再自动爆发；实际 +4 |
+| 24 多人 | 两个独立客户端及 Dedicated，旁观者多 Pose/头顶、无相机/音乐 |
+| 25 Dedicated 安全 | 独立服务器实际启动和整场演出；发布扫描公共代码无客户端引用 |
+
+### 发布、音频及人工复核
+
+`python scripts/verify-hao-release.py`：**HAO RELEASE VERIFICATION PASSED**。实际 ffprobe 为 Vorbis、44100 Hz、双声道；转换命令质量 5。正式 JAR 和 sources JAR 包含 sounds.json、注册和全部 20 条中英键，均没有 `jiahao_march.ogg` 或测试模组。精确本地音频路径已 Git 忽略、未跟踪；本地文件保留。Git diff 检查无空白错误。
+
+人工仍需听感验收 0.75 相对音量、0.4 秒淡入/1 秒淡出与其他背景音乐的混合；不同皮肤、GUI 比例、狭窄墙角的镜头构图/碰撞、Pose 转换观感、Shader/Iris/Sodium 和其他镜头/战斗模组兼容。资源热重载/缺音频降级有实现和资源扫描，但本轮未额外做完整客户端热重载或移除音频实测；未进行断电崩溃再读磁盘的实机模拟（已验证加载的未完成附件标记清零）。其他维度同时两场爆发使用原有按维度时停隔离逻辑，本轮未启动两维度双客户端场景。
+
+本地证据（build 已忽略）：
+
+- `build/hao-build-final.log`、`build/hao-client-final.log`
+- `build/hao-multiplayer-final.log`、`build/hao-multiplayer-first-{server,actor,observer}.log`
+- `build/hao-release-verification.txt`
+- `build/run/haoSmoke/hao-smoke-result.txt`、`build/run/haoSmoke/screenshots/hao-*.png`
+- `build/run/haoDedicated/hao-server-result.txt`、`build/run/hao{Actor,Observer}/hao-client-result.txt`
+
+原有环境级 JDK/native-access/Unsafe、Mojang TLS/公钥、offline-mode 和 shader sampler 提示仍存在，不阻碍本轮完成演出、保存或正常退出。音乐资源没有缺失/解码错误。

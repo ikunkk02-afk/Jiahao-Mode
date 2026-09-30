@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "com.shouyun.jiahaomode.test.haomixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CaptureMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

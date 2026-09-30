@@ -1,0 +1,5 @@
+{
+  "music.jiahao_march": {
+    "sounds": [ { "name": "jiahao-mode:music/jiahao_march", "stream": true } ]
+  }
+}

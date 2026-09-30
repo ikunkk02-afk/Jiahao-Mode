@@ -17,6 +17,7 @@ public final class JiahaoSubtitleRenderer {
   var lines=state.lines(Math.max(60,w-40));
   // Immediate fixed lines can coincide with vanilla Action Bar feedback; reserve its text row.
   int bottom=h-84;
+  if(c.player!=null&&com.shouyun.jiahaomode.state.JiahaoStateManager.isJiahao(c.player))bottom=h-126;
   if(c.currentScreen instanceof QuoteOverlayScreen)bottom=h-10;
   if(JiahaoCinematicController.isCameraActive())bottom=Math.min(bottom,h-Math.round(h*.06f)-20);
   int y=bottom-lines.size()*11;

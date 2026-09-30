@@ -1,0 +1,22 @@
+// Opt-in real client checks in a disposable copy of the existing test world.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('haoSmoke')
+        smoke.java.setSrcDirs(['src/haosmoke/java'])
+        smoke.resources.setSrcDirs(['src/haosmoke/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-hao-smoke') { sourceSet smoke }
+        loom.runs.client {
+            runDir 'build/run/haoSmoke'
+            programArgs '--quickPlaySingleplayer', 'CinematicSmoke', '--width', '1280', '--height', '720'
+        }
+        def result = project.file('build/run/haoSmoke/hao-smoke-result.txt')
+        tasks.named('runClient') {
+            dependsOn tasks.named('haoSmokeClasses')
+            classpath += smoke.output
+            doFirst { java.nio.file.Files.deleteIfExists(result.toPath()) }
+            doLast { if (!result.exists() || result.text.trim() != 'PASSED') throw new GradleException('Hao client smoke failed: inspect hao-smoke-result.txt and logs') }
+        }
+    }
+}

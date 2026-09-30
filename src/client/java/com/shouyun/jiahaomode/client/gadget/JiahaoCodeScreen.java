@@ -33,6 +33,7 @@ public final class JiahaoCodeScreen extends Screen implements JiahaoSubtitleRend
     }
     private void submit(){
         if(!terminal.submit(input.getText()))return;
+        HaoGadgetClient.begin(com.shouyun.jiahaomode.network.HaoGadgetPayload.Action.CODE);
         input.setText("");historyCursor=terminal.historySize();refresh();
         if(random.nextDouble()<.35)JiahaoGadgetClient.request(JiahaoGadgetQuoteRequestPayload.Kind.CODE);
     }
@@ -61,6 +62,6 @@ public final class JiahaoCodeScreen extends Screen implements JiahaoSubtitleRend
     }
     @Override public boolean shouldPause(){return false;}
     @Override public void renderBackground(DrawContext d,int mouseX,int mouseY,float delta){}
-    @Override public void removed(){terminal.clear();java.util.Arrays.fill(lines,null);if(input!=null)input.setText("");super.removed();}
+    @Override public void removed(){HaoGadgetClient.close();terminal.clear();java.util.Arrays.fill(lines,null);if(input!=null)input.setText("");super.removed();}
     public JiahaoCodeModel model(){return terminal;}
 }

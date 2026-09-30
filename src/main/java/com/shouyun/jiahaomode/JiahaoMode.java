@@ -20,7 +20,10 @@ public class JiahaoMode implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		JiahaoState.initialize();
+		com.shouyun.jiahaomode.hao.HaoState.initialize();
+		com.shouyun.jiahaomode.network.HaoNetworking.initialize();
 		ModItems.initialize();
+		com.shouyun.jiahaomode.sound.ModSounds.initialize();
 		com.shouyun.jiahaomode.state.JiahaoStateManager.initialize();
 		com.shouyun.jiahaomode.network.JiahaoTimeNetworking.initialize();
 		com.shouyun.jiahaomode.timestop.JiahaoTimeStopManager.initialize();
@@ -30,6 +33,8 @@ public class JiahaoMode implements ModInitializer {
 		com.shouyun.jiahaomode.dodge.JiahaoDodgeManager.initialize();
 		com.shouyun.jiahaomode.network.JiahaoMomentNetworking.initialize();
 		com.shouyun.jiahaomode.moment.JiahaoMomentManager.initialize();
+		com.shouyun.jiahaomode.hao.HaoMeterManager.initialize();
+		com.shouyun.jiahaomode.hao.HaoGadgetManager.initialize();
 		LOGGER.info("Jiahao transformation system initialized");
 	}
 

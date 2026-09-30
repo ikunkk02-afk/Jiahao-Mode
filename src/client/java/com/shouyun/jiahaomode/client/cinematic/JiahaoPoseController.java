@@ -55,16 +55,17 @@ public final class JiahaoPoseController {
         double delay = duration == 60 ? 8 : 0;
         double weight = CinematicTimeline.smooth((time - delay) / 8)
                 * (1 - CinematicTimeline.smooth((time - duration + 4) / 4));
-        double torsoPitch = Math.toRadians(pose.degrees(1, 0));
-        double torsoYaw = Math.toRadians(pose.degrees(1, 1));
+        if(JiahaoCinematicController.isBurstPose(player))weight=com.shouyun.jiahaomode.hao.HaoBurstTimeline.poseWeight(time);
+        double torsoPitch = Math.toRadians(JiahaoCinematicController.poseDegrees(player,1, 0));
+        double torsoYaw = Math.toRadians(JiahaoCinematicController.poseDegrees(player,1, 1));
         for (int i = 0; i < 6; i++) {
             ModelPart part = parts[i];
             boolean upper = i == 0 || i == 2 || i == 3;
-            double pitch = Math.toRadians(pose.degrees(i, 0)) + (upper ? torsoPitch : 0);
-            double yaw = Math.toRadians(pose.degrees(i, 1)) + (upper ? torsoYaw : 0);
+            double pitch = Math.toRadians(JiahaoCinematicController.poseDegrees(player,i, 0)) + (upper ? torsoPitch : 0);
+            double yaw = Math.toRadians(JiahaoCinematicController.poseDegrees(player,i, 1)) + (upper ? torsoYaw : 0);
             part.pitch = (float) CinematicTimeline.lerp(part.pitch, pitch, weight);
             part.yaw = (float) CinematicTimeline.lerp(part.yaw, yaw, weight);
-            part.roll = (float) CinematicTimeline.lerp(part.roll, Math.toRadians(pose.degrees(i, 2)), weight);
+            part.roll = (float) CinematicTimeline.lerp(part.roll, Math.toRadians(JiahaoCinematicController.poseDegrees(player,i, 2)), weight);
             if (i <= 3) {
                 // Upper parts are siblings. Rotate their roots about the hips, not the neck.
                 double x = i == 2 ? -5 : i == 3 ? 5 : 0, y = i >= 2 ? 2 : 0;

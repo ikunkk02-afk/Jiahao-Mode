@@ -16,7 +16,9 @@
       "com.shouyun.jiahaomode.test.JiahaoCinematicTests",
       "com.shouyun.jiahaomode.test.JiahaoQuoteTests",
       "com.shouyun.jiahaomode.test.JiahaoDodgeTests",
-      "com.shouyun.jiahaomode.test.JiahaoMomentTests"
+      "com.shouyun.jiahaomode.test.JiahaoMomentTests",
+      "com.shouyun.jiahaomode.test.HaoMeterTests",
+      "com.shouyun.jiahaomode.test.HaoGadgetTests"
     ]
   },
   "depends": {
