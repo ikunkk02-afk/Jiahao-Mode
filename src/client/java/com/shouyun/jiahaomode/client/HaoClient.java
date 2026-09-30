@@ -36,7 +36,7 @@ public final class HaoClient {
             if(c.player==null||c.options.hudHidden||!JiahaoStateManager.isJiahao(c.player)||c.currentScreen!=null)return;
             long current=System.nanoTime();double dt=frame==0?0:Math.min(.1,(current-frame)/1e9);frame=current;
             displayed+=(target-displayed)*(1-Math.exp(-8*dt));
-            int w=Math.min(182,draw.getScaledWindowWidth()-24),x=(draw.getScaledWindowWidth()-w)/2,y=draw.getScaledWindowHeight()-86;
+            int w=Math.max(1,Math.min(182,draw.getScaledWindowWidth()-24)),x=12,y=34;
             int percent=target==10000?100:(int)Math.floor(displayed/100);
             double pulse=target>=9000?.9+.1*Math.sin(current/1e9*2):1;
             int alpha=(int)(220*pulse),white=(alpha<<24)|0xffffff;

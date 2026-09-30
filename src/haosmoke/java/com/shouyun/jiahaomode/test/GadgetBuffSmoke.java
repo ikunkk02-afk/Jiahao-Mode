@@ -3,6 +3,8 @@ package com.shouyun.jiahaomode.test;
 
 import com.shouyun.jiahaomode.client.JiahaoMusicController;
 import com.shouyun.jiahaomode.client.JiahaoTimeKeyBindings;
+import com.shouyun.jiahaomode.client.JiahaoClientConfig;
+import com.shouyun.jiahaomode.client.JiahaoMusicVolumeSlider;
 import com.shouyun.jiahaomode.client.gadget.*;
 import com.shouyun.jiahaomode.client.visual.JiahaoTimeStopClientState;
 import com.shouyun.jiahaomode.hao.HaoMeterManager;
@@ -16,6 +18,9 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.widget.*;
+import net.minecraft.client.gui.ParentElement;
+import net.minecraft.client.gui.screen.option.SoundOptionsScreen;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
@@ -31,6 +36,7 @@ public final class GadgetBuffSmoke implements ClientModInitializer {
     private volatile boolean checked,ok;
     private net.minecraft.client.sound.SoundInstance voice;
     private float fadeVolume=1;private boolean sawFade;
+    private double originalModVolume,originalMusicVolume,originalMasterVolume;
     public void onInitializeClient(){
         if(!Boolean.getBoolean("jiahao.gadget.smoke"))return;
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);
@@ -42,8 +48,27 @@ public final class GadgetBuffSmoke implements ClientModInitializer {
             if(stage==0){
                 if(c.player==null||c.world==null||c.getOverlay()!=null||ticks<100)return;
                 c.options.pauseOnLostFocus=false;c.options.getMaxFps().setValue(90);c.setScreen(null);
+                originalModVolume=JiahaoClientConfig.musicVolume();
+                originalMusicVolume=c.options.getSoundVolumeOption(SoundCategory.MUSIC).getValue();
+                originalMasterVolume=c.options.getSoundVolumeOption(SoundCategory.MASTER).getValue();
+                c.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(1.0);
                 ClientPlayNetworking.send(new JiahaoMomentPreferencePayload(false));
-                setup(c);stage=1;ticks=0;return;
+                setup(c);c.setScreen(new SoundOptionsScreen(null,c.options));stage=8;ticks=0;return;
+            }
+            if(stage==8){
+                if(ticks==10){
+                    var list=(OptionListWidget)c.currentScreen.children().stream().filter(OptionListWidget.class::isInstance).findFirst().orElseThrow();
+                    var slider=(JiahaoMusicVolumeSlider)((ParentElement)list).children().stream()
+                        .flatMap(entry->((ParentElement)entry).children().stream())
+                        .filter(JiahaoMusicVolumeSlider.class::isInstance).findFirst().orElseThrow();
+                    check(slider.getY()>=list.getY()&&slider.getY()+20<=list.getY()+list.getHeight(),"Mod volume slider visible in vanilla sound screen");
+                    slider.onClick(slider.getX()+4+(slider.getWidth()-8)*.4,slider.getY()+10);
+                    check(Math.abs(JiahaoClientConfig.musicVolume()-.4)<.001,"Real slider changes independent preference");
+                    JiahaoClientConfig.load();
+                    check(Math.abs(JiahaoClientConfig.musicVolume()-.4)<.001,"Mod volume survives config reload");
+                    HaoCapture.pending="jiahao-volume-settings.png";
+                }
+                if(ticks==15){c.setScreen(null);JiahaoClientConfig.setMusicVolume(1);stage=1;ticks=0;}
             }
             if(stage==1){
                 if(ticks==45){pressR();check(JiahaoMusicController.soundInstance()==null,"R never plays before acknowledgment");}
@@ -74,8 +99,17 @@ public final class GadgetBuffSmoke implements ClientModInitializer {
                 if(ticks==120){c.setScreen(null);stage=5;ticks=0;}
             }
             if(stage==5){
-                if(ticks==20){pressR();check(JiahaoMusicController.soundInstance()==null,"Transformed R waits for server");}
-                if(ticks==35){check(JiahaoMusicController.isPlaying(),"R actual sound engine playback");voice=JiahaoMusicController.soundInstance();}
+                if(ticks==20){
+                    c.options.getSoundVolumeOption(SoundCategory.MUSIC).setValue(0.0);
+                    JiahaoClientConfig.setMusicVolume(0);pressR();check(JiahaoMusicController.soundInstance()==null,"Transformed R waits for server");
+                }
+                if(ticks==35){check(JiahaoMusicController.isPlaying(),"R starts a real voice even when vanilla music and mod music are muted");voice=JiahaoMusicController.soundInstance();check(voice.getVolume()==0,"Mod slider zero truly mutes");}
+                if(ticks==40)JiahaoClientConfig.setMusicVolume(.4);
+                if(ticks==45){check(JiahaoMusicController.soundInstance()==voice&&JiahaoMusicController.isPlaying()&&Math.abs(voice.getVolume()-.3)<.001,"Unmute reuses voice with independent volume while vanilla Music=0");c.options.getSoundVolumeOption(SoundCategory.MUSIC).setValue(.8);}
+                if(ticks==50){check(Math.abs(voice.getVolume()-.3)<.001,"Vanilla music slider does not scale mod music");JiahaoClientConfig.setMusicVolume(0);}
+                if(ticks==55)c.options.getSoundVolumeOption(SoundCategory.MUSIC).setValue(0.0);
+                if(ticks==65){check(JiahaoMusicController.soundInstance()==voice&&JiahaoMusicController.isPlaying()&&voice.getVolume()==0,"Changing vanilla slider does not destroy muted mod voice");JiahaoClientConfig.setMusicVolume(1);}
+                if(ticks==75){check(JiahaoMusicController.soundInstance()==voice&&JiahaoMusicController.isPlaying()&&Math.abs(voice.getVolume()-.75)<.001,"Repeated mute/unmute never restarts song");HaoCapture.pending="jiahao-hud-top-left.png";}
                 if(ticks==140){check(JiahaoMusicController.soundInstance()==voice&&JiahaoMusicController.isPlaying(),"R continues after five-second camera");fadeVolume=voice.getVolume();pressR();}
                 if(ticks>=143&&ticks<165&&JiahaoMusicController.isFading()){
                     check(JiahaoMusicController.soundInstance()==voice,"Fade uses original voice");
@@ -119,6 +153,6 @@ public final class GadgetBuffSmoke implements ClientModInitializer {
     private static void market(MinecraftClient c,int index){var s=(JiahaoMarketScreen)c.currentScreen;s.children().stream().filter(ButtonWidget.class::isInstance).map(ButtonWidget.class::cast).toList().get(index).onPress();}
     private static void code(MinecraftClient c,String text){var s=(JiahaoCodeScreen)c.currentScreen;var input=(TextFieldWidget)s.children().stream().filter(TextFieldWidget.class::isInstance).findFirst().orElseThrow();input.setText(text);s.keyPressed(GLFW.GLFW_KEY_ENTER,0,0);}
     private static void pressR(){KeyBinding.onKeyPressed(InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_R));}
-    private void finish(MinecraftClient c,boolean success,Throwable error){done=true;c.setScreen(null);if(c.getServer()!=null)c.getServer().stop(false);c.disconnect();check(JiahaoMusicController.soundInstance()==null,"Disconnect clears music");try{Files.writeString(Path.of("gadget-smoke-result.txt"),success?"PASSED":"FAILED stage="+stage+" ticks="+ticks+" "+error);}catch(Exception e){throw new RuntimeException(e);}c.scheduleStop();}
+    private void finish(MinecraftClient c,boolean success,Throwable error){done=true;c.setScreen(null);JiahaoClientConfig.setMusicVolume(originalModVolume);c.options.getSoundVolumeOption(SoundCategory.MUSIC).setValue(originalMusicVolume);c.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(originalMasterVolume);if(c.getServer()!=null)c.getServer().stop(false);c.disconnect();check(JiahaoMusicController.soundInstance()==null,"Disconnect clears music");try{Files.writeString(Path.of("gadget-smoke-result.txt"),success?"PASSED":"FAILED stage="+stage+" ticks="+ticks+" "+error);}catch(Exception e){throw new RuntimeException(e);}c.scheduleStop();}
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
 }

@@ -81,8 +81,8 @@ public final class JiahaoMusicController {
         var resource = client.getSoundManager().get(ModSounds.JIAHAO_MARCH.getId());
         if (resource == null || resource.getWeight() == 0) return;
         playing = new HaoMarchSound();
-        // Minecraft skips a voice started at exactly zero volume; the fade still begins at silence.
-        playing.volume(Math.max(.001f,volume()));
+        // The voice can start silently, so unmuting never starts the song from the beginning.
+        playing.volume(volume());
         client.getSoundManager().play(playing);
     }
     private static float volume() {

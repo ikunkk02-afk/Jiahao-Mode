@@ -763,3 +763,16 @@ python scripts/hao-multiplayer-smoke.py
 最终日志仍有 JDK 25/JNA native-access、Guava Unsafe 弃用提示，原版山羊角缺失音效与 Shader Sampler2 提示；部分测试假账号的 Mojang profile 查询失败。没有新的业务编译错误或 Mixin 注入失败。歌曲说明文件改为小写 `sounds/music/readme.md`，消除了原有非法资源路径 ERROR。
 
 设备专项和天气回归在退出时各出现一次 OpenAL `Stop: Invalid name parameter` ERROR；声音播放、音乐清理断言和正常退出均通过，退出期该提示尚未消除，不报告为零 Warning/ERROR。运行证据保留原始日志。`git diff --check` 无空白错误；Git 对部分 Windows 文本提示后续 LF → CRLF 规范化，不影响构建。
+
+
+## 2026-09-30 独立音乐音量与左上角豪气 HUD
+
+- `gradlew.bat build`：`BUILD SUCCESSFUL in 29s`，27 个必需 GameTest 与既有五组数学/模型检查通过。
+- `scripts/gadget-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 1m 52s`，日志 `build/verification/volume-hud-client.log`。实际打开原版声音设置并操作“嘉豪音乐音量”滑块，40% 保存/重载后保持；原版音乐 0%、嘉豪音乐 0% 时仍创建声音引擎实例，嘉豪恢复至 40% 后实例音量为 0.3。原版音乐调至 80% 不改变此音量；嘉豪再次静音、调节原版音乐、恢复至 100% 后仍使用原实例，音量 0.75。已有 R 镜头后播放、提前结束淡出、形态解除、重载、强制结束、GUI 操作和 Buff 检查同时通过。测试结束恢复夹具原来的音量设置。
+- `scripts/hao-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 1m 10s`，日志 `build/verification/volume-hud-burst.log`；豪气爆发正常淡入淡出、重复同步、多个 Pose、语录及解除形态/切维度/死亡清理回归通过。
+- 截图人工检查：`build/run/gadgetSmoke/screenshots/jiahao-volume-settings.png` 的滑块位于声音设置列表首行；`jiahao-hud-top-left.png` 的豪气文字与进度条位于左上角，电影黑边和状态效果未遮挡该截图中的豪气信息。聚集提示位于进度条上方，语录字幕仍保留原位置。
+- `python scripts/verify-hao-release.py` 通过：中英语音量翻译、两个声音设置/声音引擎 Mixin 与原歌曲进入正式及源码包，测试组件未进入发布包；`build/verification/volume-hud-release.txt`。`git diff --check` 通过。
+
+嘉豪音乐使用独立 0–100% 客户端偏好；原版“主音量”仍控制全部声音。声音实例可在嘉豪音量为零时开始，并在调节原版分类滑块时保留，以便恢复后继续当前位置。证据来自声音引擎播放状态、实例音量、真实设置界面与截图，未取得实际听音证据。
+
+本轮两个客户端日志均无 ERROR；仍有已有的 JDK 25/JNA native-access、Guava Unsafe、原版山羊角音效缺失、Shader Sampler2 及离线测试账号的 profile 查询 Warning。此前记录的退出期 OpenAL 提示本轮未出现，不能据此宣称其根因已修复。

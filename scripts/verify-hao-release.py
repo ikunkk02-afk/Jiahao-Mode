@@ -27,6 +27,9 @@ for name in ['jiahao-mode-1.0.0.jar', 'jiahao-mode-1.0.0-sources.jar']:
             assert all(lines[f'jiahao.quote.market.{i}'] for i in range(1, 15))
             assert all(lines[f'jiahao.quote.code.{i}'] for i in range(1, 18))
             assert all(lines[f'message.jiahao-mode.buff.{key}'] for key in ['form_required','cooldown','invalid','preserved','granted','override'])
+            assert lines['options.jiahao-mode.music_volume']
+        client_mixins = json.loads(archive.read('jiahao-mode.client.mixins.json'))['client']
+        assert 'SoundOptionsScreenMixin' in client_mixins and 'SoundSystemMusicMixin' in client_mixins
         print(name + ': registration/translations/music present; test harness excluded')
 
 for source in (root / 'src/main/java').rglob('*.java'):

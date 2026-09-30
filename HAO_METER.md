@@ -4,7 +4,7 @@
 
 ## 使用和奖励
 
-嘉豪形态显示底部中央豪气条，每秒增长 1。80% 提示聚集，90% 轻微呼吸，等待和爆发显示 MAX。遵循原版隐藏 HUD 设置，字幕位于豪气条上方。
+嘉豪形态在左上角显示豪气条，每秒增长 1。80% 提示聚集，90% 轻微呼吸，等待和爆发显示 MAX。遵循原版隐藏 HUD 设置；豪气文字与聚集提示也在左上角，语录字幕保留原有位置。
 
 OP 等级 2 可执行 `/jiahao hao set <0-100>`、`add <0-100>`、`burst`。推荐 `/jiahao hao set 99` 测试自然补满；`burst` 设置 MAX，走同一准备流程。管理命令清除增长锁，不能改写正在爆发的会话。
 
@@ -54,7 +54,7 @@ MAX 设置等待序号，每 Tick 检查基本条件：已有时停/演出、闪
 
 `jiahao-mode:music.jiahao_march` 在 `sound.ModSounds` 注册，`assets/jiahao-mode/sounds.json` 使用 `jiahao-mode:music/jiahao_march`、`stream: true`。仅通过 Minecraft 资源系统播放，不读取系统 FLAC；缺音频跳过音乐，演出继续。
 
-客户端 `JiahaoMusicController` 管理唯一的 `HaoMarchSound extends MovingSoundInstance`，使用原版 `TickableSoundInstance` 行为，MUSIC 分类、相对音量 0.75、非定位/无衰减，0.4 秒淡入、1 秒淡出。服务器确认后每个会话至多一实例，经过 6 Tick 才开始。
+客户端 `JiahaoMusicController` 管理唯一的 `HaoMarchSound extends MovingSoundInstance`，使用原版 `TickableSoundInstance` 行为，独立嘉豪音乐音量、相对音量 0.75、非定位/无衰减，0.4 秒淡入、1 秒淡出。服务器确认后每个会话至多一实例，经过 6 Tick 才开始。
 
 正常结束最后一秒淡出；死亡、换维度、退出世界、解除形态、相机异常取消立即停止。资源重载停止实例且本次不从头重播。服务端不引用客户端音频/渲染类。服务端结束路径清理冻结、锁、语录和状态，客户端断线/换世界另有兜底。
 

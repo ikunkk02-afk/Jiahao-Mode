@@ -6,6 +6,7 @@
     "WorldWeatherTimeStopMixin", "ParticleTimeStopMixin", "ParticleManagerTimeStopMixin",
     "CameraCinematicMixin", "GameRendererCinematicMixin", "PlayerModelCinematicMixin", "PlayerRenderCinematicMixin",
     "HudCinematicMixin", "KeyboardCinematicMixin", "MouseCinematicMixin", "ClientActionsCinematicMixin",
-    "ClientPlayerDodgeMixin", "ClientDodgeReconciliationMixin", "KeyBindingDodgeMixin"],
+    "ClientPlayerDodgeMixin", "ClientDodgeReconciliationMixin", "KeyBindingDodgeMixin",
+    "SoundOptionsScreenMixin", "SoundSystemMusicMixin"],
   "injectors": { "defaultRequire": 1 }
 }
