@@ -38,7 +38,7 @@ public final class HaoSmoke implements ClientModInitializer {
     private final Set<JiahaoPoseType> seenPoses=new HashSet<>();private final Set<String> quotes=new HashSet<>(),shots=new HashSet<>();
     private volatile int serverUnits,baseUnits;private volatile long baseTick;private volatile boolean serverCheck,serverBuff;
     public void onInitializeClient(){
-        if(Boolean.getBoolean("jiahao.hao.dedicated")||Boolean.getBoolean("jiahao.gadget.smoke"))return;
+        if(Boolean.getBoolean("jiahao.hao.dedicated")||Boolean.getBoolean("jiahao.gadget.smoke")||Boolean.getBoolean("jiahao.discs.smoke"))return;
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);
         WorldRenderEvents.AFTER_ENTITIES.register(context->{
             if(done||stage!=5||!JiahaoCinematicController.isCameraActive())return;

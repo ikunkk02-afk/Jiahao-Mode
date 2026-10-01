@@ -9,7 +9,8 @@
     "client": [
       "com.shouyun.jiahaomode.test.HaoSmoke",
       "com.shouyun.jiahaomode.test.GadgetBuffSmoke",
-      "com.shouyun.jiahaomode.test.HaoDedicatedClient"
+      "com.shouyun.jiahaomode.test.HaoDedicatedClient",
+      "com.shouyun.jiahaomode.test.MusicDiscSmoke"
     ],
     "main": [
       "com.shouyun.jiahaomode.test.HaoDedicatedServer"

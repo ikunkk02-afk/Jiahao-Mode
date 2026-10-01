@@ -1,0 +1,23 @@
+// Native jukebox playback in an isolated copy of the existing smoke fixture.
+allprojects {
+    afterEvaluate {
+        def smoke = sourceSets.create('musicDiscSmoke')
+        smoke.java.setSrcDirs(['src/haosmoke/java'])
+        smoke.resources.setSrcDirs(['src/haosmoke/resources'])
+        smoke.compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.compileClasspath
+        smoke.runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.client.runtimeClasspath
+        loom.mods.create('jiahao-hao-smoke') { sourceSet smoke }
+        loom.runs.client {
+            runDir 'build/run/musicDiscSmoke'
+            programArgs '--quickPlaySingleplayer', 'CinematicSmoke', '--width', '1280', '--height', '720'
+        }
+        def result = project.file('build/run/musicDiscSmoke/music-discs-result.txt')
+        tasks.named('runClient') {
+            dependsOn tasks.named('musicDiscSmokeClasses')
+            classpath += smoke.output
+            jvmArgs '-Djiahao.discs.smoke=true'
+            doFirst { java.nio.file.Files.deleteIfExists(result.toPath()) }
+            doLast { if (!result.exists() || result.text.trim() != 'PASSED') throw new GradleException('Music disc smoke failed: inspect music-discs-result.txt and logs') }
+        }
+    }
+}

@@ -19,7 +19,8 @@
       "com.shouyun.jiahaomode.test.JiahaoMomentTests",
       "com.shouyun.jiahaomode.test.HaoMeterTests",
       "com.shouyun.jiahaomode.test.HaoGadgetTests",
-      "com.shouyun.jiahaomode.test.JiahaoBuffTests"
+      "com.shouyun.jiahaomode.test.JiahaoBuffTests",
+      "com.shouyun.jiahaomode.test.JiahaoMusicDiscTests"
     ]
   },
   "depends": {

@@ -1,5 +1,34 @@
 {
   "music.jiahao_march": {
-    "sounds": [ { "name": "jiahao-mode:music/jiahao_march", "stream": true } ]
+    "sounds": [
+      {
+        "name": "jiahao-mode:music/jiahao_march",
+        "stream": true
+      }
+    ]
+  },
+  "music_disc.jiahao_march": {
+    "sounds": [
+      {
+        "name": "jiahao-mode:music/discs/jiahao_march",
+        "stream": true
+      }
+    ]
+  },
+  "music_disc.nevada": {
+    "sounds": [
+      {
+        "name": "jiahao-mode:music/discs/nevada",
+        "stream": true
+      }
+    ]
+  },
+  "music_disc.spectre": {
+    "sounds": [
+      {
+        "name": "jiahao-mode:music/discs/spectre",
+        "stream": true
+      }
+    ]
   }
 }

@@ -186,5 +186,11 @@
   "jiahao.quote.code.15": "The rules have been updated.",
   "jiahao.quote.code.16": "This time, the system understands.",
   "jiahao.quote.code.17": "Permissions are no longer a problem.",
-  "options.jiahao-mode.music_volume": "Jiahao Music Volume: %s%%"
+  "options.jiahao-mode.music_volume": "Jiahao Music Volume: %s%%",
+  "item.jiahao-mode.music_disc_jiahao_march": "Music Disc — Jiahao March",
+  "jukebox_song.jiahao-mode.jiahao_march": "N2UtheHartlocker — †TAKEDISKRUSH!†（嘉豪进行曲）",
+  "item.jiahao-mode.music_disc_nevada": "Music Disc — Nevada",
+  "jukebox_song.jiahao-mode.nevada": "Vicetone / Cozi Zuehlsdorff — Nevada",
+  "item.jiahao-mode.music_disc_spectre": "Music Disc — Spectre",
+  "jukebox_song.jiahao-mode.spectre": "Alan Walker — Spectre"
 }

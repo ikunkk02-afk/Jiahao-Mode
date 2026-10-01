@@ -776,3 +776,16 @@ python scripts/hao-multiplayer-smoke.py
 嘉豪音乐使用独立 0–100% 客户端偏好；原版“主音量”仍控制全部声音。声音实例可在嘉豪音量为零时开始，并在调节原版分类滑块时保留，以便恢复后继续当前位置。证据来自声音引擎播放状态、实例音量、真实设置界面与截图，未取得实际听音证据。
 
 本轮两个客户端日志均无 ERROR；仍有已有的 JDK 25/JNA native-access、Guava Unsafe、原版山羊角音效缺失、Shader Sampler2 及离线测试账号的 profile 查询 Warning。此前记录的退出期 OpenAL 提示本轮未出现，不能据此宣称其根因已修复。
+
+
+## 2026-10-01 三张音乐唱片
+
+- `gradlew.bat build`：`BUILD SUCCESSFUL in 27s`，**28 个必需 GameTest 全通过**，既有五组数学/模型检查通过；`build/verification/music-discs-build.log`。
+- 新增 `JiahaoMusicDiscTests.allDiscsInsertPlayStopAndEject`：三张唱片的动态歌曲注册、音频时长、不可堆叠、`c:music_discs` 标签、原版存储接受、普通玩家插入并转移唱片、占用拒绝、13/14/15 比较器输出、歌曲自然结束边界保留唱片、取出清空均通过。长曲结束采用原版管理器推进至结束边界，不等待数分钟。
+- `gradlew.bat -I scripts/music-disc-smoke.gradle runClient`：`PASSED`、`BUILD SUCCESSFUL in 35s`，`build/verification/music-discs-client.log` 与 `build/run/musicDiscSmoke/music-discs-result.txt`。隔离世界中通过真实客户端右键、网络和服务端处理逐张插入/取出，三首歌均获得 `RECORDS` 原版声音实例且引擎 `isPlaying` 为真，取出后停止。截图 `build/run/musicDiscSmoke/screenshots/music-disc-{jiahao_march,nevada,spectre}.png`，已检查播放提示和唱片图标。
+- `python scripts/verify-music-disc-release.py`：`MUSIC DISC RELEASE VERIFICATION PASSED`；`build/verification/music-discs-release.txt`。三首完整 OGG 在正式与源码包内字节一致；单声道 / Vorbis / 44100 Hz；时长与歌曲 JSON 相符；模型、三张原创图标、中英名称和描述齐全，测试组件未打包。
+- 既有 `scripts/verify-hao-release.py` 仍通过，原 R / Hao Burst 的歌曲资源及独立音量组件保持完整；`build/verification/music-discs-hao-release.txt`。`git diff --check` 通过。
+
+最终客户端日志无 ERROR；仍有 JDK 25/JNA native-access、Guava Unsafe、原版山羊音效和 Shader Sampler2 Warning。导入时采用当前 `c:music_discs` 标签，已消除初次测试发现的 legacy-tag Warning。测试夹具先修复声音引擎初始化前注册监听与退出时未停止集成服务器的问题，再完成上述成功运行；它们均属于隔离测试代码。
+
+播放证据来自原版声音引擎、实际唱片机交互和截图；未取得实际听音或录音证据，不将其记为人工听音确认。测试仅使用 `build/run/musicDiscSmoke` 的独立世界，不修改日常存档。原 Downloads 文件夹中的三个 MP3 未修改。

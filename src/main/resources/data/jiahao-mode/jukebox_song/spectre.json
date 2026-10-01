@@ -1,0 +1,8 @@
+{
+  "sound_event": "jiahao-mode:music_disc.spectre",
+  "description": {
+    "translate": "jukebox_song.jiahao-mode.spectre"
+  },
+  "length_in_seconds": 230.634762,
+  "comparator_output": 15
+}

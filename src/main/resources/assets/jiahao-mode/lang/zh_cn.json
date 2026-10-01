@@ -186,5 +186,11 @@
   "jiahao.quote.code.15": "规则已经更新。",
   "jiahao.quote.code.16": "这一次，系统理解了。",
   "jiahao.quote.code.17": "权限已经不是问题。",
-  "options.jiahao-mode.music_volume": "嘉豪音乐音量：%s%%"
+  "options.jiahao-mode.music_volume": "嘉豪音乐音量：%s%%",
+  "item.jiahao-mode.music_disc_jiahao_march": "音乐唱片 — 嘉豪进行曲",
+  "jukebox_song.jiahao-mode.jiahao_march": "N2UtheHartlocker — †TAKEDISKRUSH!†（嘉豪进行曲）",
+  "item.jiahao-mode.music_disc_nevada": "音乐唱片 — Nevada",
+  "jukebox_song.jiahao-mode.nevada": "Vicetone / Cozi Zuehlsdorff — Nevada",
+  "item.jiahao-mode.music_disc_spectre": "音乐唱片 — Spectre",
+  "jukebox_song.jiahao-mode.spectre": "Alan Walker — Spectre"
 }

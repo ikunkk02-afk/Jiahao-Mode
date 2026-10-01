@@ -183,3 +183,8 @@ GUI、受伤、传送、死亡、退出形态或断线都会取消。镜头优�
 OP 等级 2 用 `/jiahao hao set 99` 测试自然补满，也可 `add <0-100>` 或 `burst`。嘉豪进行曲 OGG 随发布及源码 JAR 打包，也用于本地 runClient；客户端只通过 Minecraft 资源系统播放。缺音乐仍可演出。
 
 机制、完整语录、时间轴及资源说明见 [HAO_METER.md](HAO_METER.md)，实测和 TEST 1–25 对应见 [TESTING.md](TESTING.md)。
+
+
+## 音乐唱片
+
+新增嘉豪进行曲、Nevada、Spectre 三张唱片，在创造模式“工具与实用物品”中获取，右键原版唱片机播放或取出。歌曲已随模组打包，使用“唱片机／音符盒”音量；物品 ID、时长和资源说明见 [MUSIC_DISCS.md](MUSIC_DISCS.md)。

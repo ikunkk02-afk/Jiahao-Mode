@@ -9,10 +9,16 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.util.Rarity;
 
 public final class ModItems {
 	public static final Item MARKET_VIEWER = Registry.register(Registries.ITEM, JiahaoMode.id("market_viewer"), new JiahaoGadgetItem());
 	public static final Item JIAHAO_CODE_EDITOR = Registry.register(Registries.ITEM, JiahaoMode.id("jiahao_code_editor"), new JiahaoGadgetItem());
+	public static final Item MUSIC_DISC_JIAHAO_MARCH = musicDisc("jiahao_march");
+	public static final Item MUSIC_DISC_NEVADA = musicDisc("nevada");
+	public static final Item MUSIC_DISC_SPECTRE = musicDisc("spectre");
 	public static final Item JIAHAO_HELMET = armor("jiahao_helmet", ArmorItem.Type.HELMET);
 	public static final Item JIAHAO_CHESTPLATE = armor("jiahao_chestplate", ArmorItem.Type.CHESTPLATE);
 	public static final Item JIAHAO_LEGGINGS = armor("jiahao_leggings", ArmorItem.Type.LEGGINGS);
@@ -23,6 +29,12 @@ public final class ModItems {
 			new JiahaoTransformerItem(new Item.Settings().maxCount(1)));
 
 	private ModItems() {
+	}
+
+	private static Item musicDisc(String song) {
+		return Registry.register(Registries.ITEM, JiahaoMode.id("music_disc_" + song), new Item(
+				new Item.Settings().maxCount(1).rarity(Rarity.RARE)
+						.jukeboxPlayable(RegistryKey.of(RegistryKeys.JUKEBOX_SONG, JiahaoMode.id(song)))));
 	}
 
 	private static Item armor(String id, ArmorItem.Type type) {
@@ -37,6 +49,9 @@ public final class ModItems {
 			entries.add(JIAHAO_LEGGINGS); entries.add(JIAHAO_BOOTS);
 		});
 		ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS)
-				.register(entries -> { entries.add(JIAHAO_TRANSFORMER); entries.add(MARKET_VIEWER); entries.add(JIAHAO_CODE_EDITOR); });
+				.register(entries -> {
+					entries.add(JIAHAO_TRANSFORMER); entries.add(MARKET_VIEWER); entries.add(JIAHAO_CODE_EDITOR);
+					entries.add(MUSIC_DISC_JIAHAO_MARCH); entries.add(MUSIC_DISC_NEVADA); entries.add(MUSIC_DISC_SPECTRE);
+				});
 	}
 }
